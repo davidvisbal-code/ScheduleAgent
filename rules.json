@@ -1,0 +1,29 @@
+{
+  "_comment": "Edit this file (or tell the agent in chat, and copy its answer here) to change what's immovable vs movable. Matching is case-insensitive and checks if the keyword appears anywhere in the event/course title.",
+
+  "immovable_keywords": [
+    "math",
+    "physics",
+    "chemistry",
+    "quimica",
+    "matematicas",
+    "fisica"
+  ],
+
+  "movable_keywords": [
+    "gym",
+    "counselor",
+    "guidance",
+    "reading",
+    "errand",
+    "buy",
+    "shopping",
+    "personal"
+  ],
+
+  "rules": {
+    "all_classroom_coursework_is_immovable": true,
+    "accepted_calendar_invites_are_immovable_but_alert_on_new_conflicts": true,
+    "default_for_unmatched_events": "movable"
+  }
+}

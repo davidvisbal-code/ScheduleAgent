@@ -1,0 +1,2 @@
+composio>=0.9.0
+anthropic>=0.40.0
