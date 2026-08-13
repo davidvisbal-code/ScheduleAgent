@@ -59,7 +59,10 @@ def run_tool(tool_slug, arguments, account_key):
     account_id = ACCOUNTS.get(account_key)
     if not account_id:
         return None
-    result = composio.tools.execute(tool_slug, arguments=arguments, connected_account_id=account_id)
+    result = composio.tools.execute(
+        tool_slug, arguments=arguments, connected_account_id=account_id,
+        dangerously_skip_version_check=True,
+    )
     if not result.get("successful", False):
         print(f"[warn] {tool_slug} on {account_key} failed: {result.get('error')}")
         return None

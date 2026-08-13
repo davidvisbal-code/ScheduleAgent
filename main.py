@@ -73,6 +73,7 @@ def run_tool(tool_slug, arguments, account_key):
         tool_slug,
         arguments=arguments,
         connected_account_id=account_id,
+        dangerously_skip_version_check=True,
     )
     if not result.get("successful", False):
         print(f"[warn] {tool_slug} on {account_key} failed: {result.get('error')}")
