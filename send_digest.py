@@ -9,10 +9,10 @@ import json
 from pathlib import Path
 from composio import Composio
 
-COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"]
-WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
-WHATSAPP_TO_NUMBER = os.environ["WHATSAPP_TO_NUMBER"]
-WHATSAPP_ACCOUNT_ID = os.environ.get("WHATSAPP_ACCOUNT_ID")
+COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"].strip()
+WHATSAPP_TO_NUMBER = os.environ["WHATSAPP_TO_NUMBER"].strip()
+WHATSAPP_ACCOUNT_ID = os.environ.get("WHATSAPP_ACCOUNT_ID", "").strip() or None
 
 BASE_DIR = Path(__file__).parent
 DIGEST_QUEUE_FILE = BASE_DIR / "digest_queue.json"

@@ -19,14 +19,14 @@ from pathlib import Path
 from composio import Composio
 import anthropic
 
-COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"]
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
 
 ACCOUNTS = {
-    "gmail_personal": os.environ.get("GMAIL_PERSONAL_ACCOUNT_ID"),
-    "calendar_personal": os.environ.get("CALENDAR_PERSONAL_ACCOUNT_ID"),
-    "calendar_school": os.environ.get("CALENDAR_SCHOOL_ACCOUNT_ID"),
-    "classroom": os.environ.get("CLASSROOM_ACCOUNT_ID"),
+    "gmail_personal": os.environ.get("GMAIL_PERSONAL_ACCOUNT_ID", "").strip() or None,
+    "calendar_personal": os.environ.get("CALENDAR_PERSONAL_ACCOUNT_ID", "").strip() or None,
+    "calendar_school": os.environ.get("CALENDAR_SCHOOL_ACCOUNT_ID", "").strip() or None,
+    "classroom": os.environ.get("CLASSROOM_ACCOUNT_ID", "").strip() or None,
 }
 # Everything gets written to ONE calendar (your personal one), even though
 # source data (classes, school invites) comes from the school account --

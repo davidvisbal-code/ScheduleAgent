@@ -22,26 +22,27 @@ import anthropic
 
 # ---------- CONFIG (fill these in via environment variables, see .env.example) ----------
 
-COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"]
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
 
-WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"]  # from WHATSAPP_GET_PHONE_NUMBERS
-WHATSAPP_TO_NUMBER = os.environ["WHATSAPP_TO_NUMBER"]  # your number, digits only, no +
+WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"].strip()  # from WHATSAPP_GET_PHONE_NUMBERS
+WHATSAPP_TO_NUMBER = os.environ["WHATSAPP_TO_NUMBER"].strip()  # your number, digits only, no +
 
 # Connected account IDs from your Composio dashboard (Connected Accounts section).
 # Leave a value as None (or unset the env var) to skip that account entirely --
 # e.g. if you never connect Gmail personal, just don't set GMAIL_PERSONAL_ACCOUNT_ID.
 ACCOUNTS = {
-    "gmail_school": os.environ.get("GMAIL_SCHOOL_ACCOUNT_ID"),
-    "gmail_personal": os.environ.get("GMAIL_PERSONAL_ACCOUNT_ID"),
-    "calendar_school": os.environ.get("CALENDAR_SCHOOL_ACCOUNT_ID"),
-    "calendar_personal": os.environ.get("CALENDAR_PERSONAL_ACCOUNT_ID"),
-    "classroom": os.environ.get("CLASSROOM_ACCOUNT_ID"),
+    "gmail_school": os.environ.get("GMAIL_SCHOOL_ACCOUNT_ID", "").strip() or None,
+    "gmail_personal": os.environ.get("GMAIL_PERSONAL_ACCOUNT_ID", "").strip() or None,
+    "calendar_school": os.environ.get("CALENDAR_SCHOOL_ACCOUNT_ID", "").strip() or None,
+    "calendar_personal": os.environ.get("CALENDAR_PERSONAL_ACCOUNT_ID", "").strip() or None,
+    "classroom": os.environ.get("CLASSROOM_ACCOUNT_ID", "").strip() or None,
 }
 
 BASE_DIR = Path(__file__).parent
 STATE_FILE = BASE_DIR / "state.json"
 RULES_FILE = BASE_DIR / "rules.json"
+DIGEST_QUEUE_FILE = BASE_DIR / "digest_queue.json"
 
 LOOKAHEAD_DAYS = 14  # how far ahead to check calendars for events
 
@@ -79,17 +80,15 @@ def run_tool(tool_slug, arguments, account_key):
     return result.get("data", {})
 
 
-def send_whatsapp(text):
-    composio.tools.execute(
-        "WHATSAPP_SEND_MESSAGE",
-        arguments={
-            "phone_number_id": WHATSAPP_PHONE_NUMBER_ID,
-            "to_number": WHATSAPP_TO_NUMBER,
-            "text": text[:4000],
-        },
-        connected_account_id=ACCOUNTS.get("whatsapp"),
-    )
-    print(f"[whatsapp] sent: {text[:80]}...")
+def append_to_digest(text):
+    """Queue a message for the next morning digest instead of texting immediately.
+    Urgent conflicts (immovable overlaps) still get flagged in the queue with a
+    marker so send_digest.py can put them first, but nothing goes out live --
+    that's the whole point of the digest model instead of 30 pings a day."""
+    queue = load_json(DIGEST_QUEUE_FILE, [])
+    queue.append({"text": text, "added": datetime.datetime.utcnow().isoformat()})
+    save_json(DIGEST_QUEUE_FILE, queue)
+    print(f"[queued] {text[:80]}...")
 
 
 def is_immovable(title, rules):
@@ -274,9 +273,9 @@ def main():
                 subject = msg.get("subject", "(no subject)")
                 messages.append(f"📧 New email ({key.replace('gmail_', '')}): {subject}")
 
-    # --- Send + persist ---
-    if messages:
-        send_whatsapp("\n\n".join(messages))
+    # --- Queue for next morning digest + persist ---
+    for m in messages:
+        append_to_digest(m)
 
     save_json(STATE_FILE, {
         "calendar_ids": new_calendar_ids,
