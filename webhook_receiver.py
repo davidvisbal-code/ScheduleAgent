@@ -25,6 +25,7 @@ app = Flask(__name__)
 
 VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "david-marymount-2026")
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
+COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"]
 COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"]  # the combined MCP server URL from Composio
 WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
 WHATSAPP_ACCESS_TOKEN = os.environ["WHATSAPP_ACCESS_TOKEN"]  # the System User permanent token
@@ -98,6 +99,7 @@ def ask_claude(user_message, history):
                     "type": "url",
                     "url": COMPOSIO_MCP_URL,
                     "name": "composio-school-tools",
+                    "authorization_token": COMPOSIO_API_KEY,
                 }
             ],
         },
@@ -116,7 +118,7 @@ def ask_claude(user_message, history):
 
 
 def send_whatsapp_reply(to_number, text):
-    requests.post(
+    response = requests.post(
         f"https://graph.facebook.com/v21.0/{WHATSAPP_PHONE_NUMBER_ID}/messages",
         headers={"Authorization": f"Bearer {WHATSAPP_ACCESS_TOKEN}"},
         json={
@@ -126,6 +128,10 @@ def send_whatsapp_reply(to_number, text):
         },
         timeout=30,
     )
+    if response.status_code != 200:
+        print(f"[whatsapp send] FAILED ({response.status_code}): {response.text}", flush=True)
+    else:
+        print(f"[whatsapp send] OK: {response.json()}", flush=True)
 
 
 def handle_message_async(from_number, message_text):
