@@ -73,6 +73,7 @@ def run_tool(tool_slug, arguments, account_key):
         tool_slug,
         arguments=arguments,
         connected_account_id=account_id,
+        user_id="default",
         dangerously_skip_version_check=True,
     )
     if not result.get("successful", False):
