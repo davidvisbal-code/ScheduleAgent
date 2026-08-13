@@ -23,13 +23,13 @@ from flask import Flask, request
 
 app = Flask(__name__)
 
-VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "david-marymount-2026")
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"]
-COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"]
-COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"]  # the combined MCP server URL from Composio
-WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"]
-WHATSAPP_ACCESS_TOKEN = os.environ["WHATSAPP_ACCESS_TOKEN"]  # the System User permanent token
-AUTHORIZED_NUMBER = os.environ["WHATSAPP_AUTHORIZED_NUMBER"]  # YOUR number, digits only, no +
+VERIFY_TOKEN = os.environ.get("WHATSAPP_VERIFY_TOKEN", "david-marymount-2026").strip()
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
+COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"].strip()  # the combined MCP server URL from Composio
+WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"].strip()
+WHATSAPP_ACCESS_TOKEN = os.environ["WHATSAPP_ACCESS_TOKEN"].strip()  # the System User permanent token
+AUTHORIZED_NUMBER = os.environ["WHATSAPP_AUTHORIZED_NUMBER"].strip()  # YOUR number, digits only, no +
 
 BASE_DIR = Path(__file__).parent
 HISTORY_FILE = BASE_DIR / "conversation_history.json"
