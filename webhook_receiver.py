@@ -68,6 +68,10 @@ You have live access to his Gmail, Google Calendar, and Google Classroom
 (school and personal, where connected) through the tools available to you --
 use them whenever a question needs real data instead of guessing.
 
+Don't narrate what you're about to look up ("let me check...", "I'll fetch
+your calendar..."). Just use the tools silently and reply with the actual
+answer once you have it.
+
 His scheduling rules, for context if relevant:
 {json.dumps(rules.get("weekly_planner", {}), indent=2)}
 {json.dumps(rules.get("immovable_keywords", []), indent=2)}
@@ -91,7 +95,7 @@ def ask_claude(user_message, history):
         },
         json={
             "model": "claude-sonnet-4-6",
-            "max_tokens": 600,
+            "max_tokens": 1500,
             "system": build_system_prompt(),
             "messages": messages,
             "mcp_servers": [
