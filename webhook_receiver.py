@@ -106,7 +106,7 @@ def ask_claude(user_message, history):
     data = response.json()
 
     if "content" not in data:
-        print(f"[claude] Unexpected response: {data}")
+        print(f"[claude] Unexpected response: {data}", flush=True)
         return "Sorry, something went wrong on my end -- try again in a bit."
 
     # Claude's reply may include tool-use blocks alongside text; only the
@@ -138,7 +138,7 @@ def handle_message_async(from_number, message_text):
     history.append({"role": "assistant", "content": reply})
     save_json(HISTORY_FILE, history[-(MAX_HISTORY_TURNS * 2):])
 
-    print(f"[webhook] Replied to {from_number}: {reply[:100]}")
+    print(f"[webhook] Replied to {from_number}: {reply[:100]}", flush=True)
 
 
 @app.route("/webhook", methods=["GET"])
@@ -147,30 +147,34 @@ def verify():
     token = request.args.get("hub.verify_token")
     challenge = request.args.get("hub.challenge")
     if mode == "subscribe" and token == VERIFY_TOKEN:
-        print("[webhook] Verified successfully by Meta.")
+        print("[webhook] Verified successfully by Meta.", flush=True)
         return challenge, 200
-    print("[webhook] Verification FAILED -- token mismatch.")
+    print("[webhook] Verification FAILED -- token mismatch.", flush=True)
     return "Forbidden", 403
 
 
 @app.route("/webhook", methods=["POST"])
 def receive():
     data = request.get_json()
+    print(f"[webhook] RAW PAYLOAD: {json.dumps(data)}", flush=True)
 
     try:
         msg = data["entry"][0]["changes"][0]["value"]["messages"][0]
     except (KeyError, IndexError, TypeError):
+        print("[webhook] Not a message event (likely a status update) -- ignoring.", flush=True)
         return "", 200  # status update or non-message event, nothing to do
 
     if msg.get("type") != "text":
+        print(f"[webhook] Ignored non-text message type: {msg.get('type')}", flush=True)
         return "", 200  # ignore images/audio/etc. for now
 
     from_number = msg["from"]
     message_id = msg["id"]
     message_text = msg["text"]["body"]
+    print(f"[webhook] Got text from {from_number}: {message_text}", flush=True)
 
     if from_number != AUTHORIZED_NUMBER:
-        print(f"[webhook] Ignored message from unauthorized number: {from_number}")
+        print(f"[webhook] Ignored message from unauthorized number: {from_number} (expected {AUTHORIZED_NUMBER})", flush=True)
         return "", 200  # silently ignore anyone who isn't David
 
     if already_processed(message_id):
