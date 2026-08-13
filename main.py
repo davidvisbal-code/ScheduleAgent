@@ -69,11 +69,21 @@ def run_tool(tool_slug, arguments, account_key):
     account_id = ACCOUNTS.get(account_key)
     if not account_id:
         return None  # account not connected, skip silently
+
+    # Ask Composio directly which user_id owns this connected account,
+    # instead of guessing a value -- this was failing before.
+    try:
+        account_info = composio.connected_accounts.get(account_id)
+        real_user_id = account_info.user_id
+    except Exception as e:
+        print(f"[warn] Couldn't look up user_id for {account_key} ({account_id}): {e}")
+        real_user_id = "default"
+
     result = composio.tools.execute(
         tool_slug,
         arguments=arguments,
         connected_account_id=account_id,
-        user_id="default",
+        user_id=real_user_id,
         dangerously_skip_version_check=True,
     )
     if not result.get("successful", False):
