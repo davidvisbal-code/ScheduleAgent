@@ -11,8 +11,8 @@ on:
     - cron: "*/15 * * * *"
     # Morning digest: 7:00 AM Colombia time (UTC-5) = 12:00 UTC.
     - cron: "0 12 * * *"
-    # Weekly planner: 6:00 AM Colombia time every Wednesday = 11:00 UTC.
-    - cron: "0 11 * * 3"
+    # Rolling planner: 6:00 AM Colombia time, EVERY DAY = 11:00 UTC.
+    - cron: "0 11 * * *"
   workflow_dispatch:
     inputs:
       script:
@@ -59,7 +59,7 @@ jobs:
             echo "script=${{ github.event.inputs.script }}" >> "$GITHUB_OUTPUT"
           elif [ "${{ github.event.schedule }}" = "0 12 * * *" ]; then
             echo "script=send_digest.py" >> "$GITHUB_OUTPUT"
-          elif [ "${{ github.event.schedule }}" = "0 11 * * 3" ]; then
+          elif [ "${{ github.event.schedule }}" = "0 11 * * *" ]; then
             echo "script=plan_week.py" >> "$GITHUB_OUTPUT"
           else
             echo "script=main.py" >> "$GITHUB_OUTPUT"
