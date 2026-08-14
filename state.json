@@ -1,5 +1,46 @@
 {
-  "calendar_ids": [],
+  "calendar_ids": [
+    "3khin23j52ogo9t67l6qk53plh",
+    "64cus06avkt8n8dgut1g6nq3be",
+    "4heegqvb82i48dekanu9hcqh5p_20260818T143500Z",
+    "70046rpata3lj9ldismcrjt2nv_20260820T124000Z",
+    "59u5roa474pnl2rg7ojnss37v0_20260820T152900Z",
+    "4heegqvb82i48dekanu9hcqh5p_20260825T143500Z",
+    "70046rpata3lj9ldismcrjt2nv_20260827T124000Z",
+    "59u5roa474pnl2rg7ojnss37v0_20260827T152900Z",
+    "06agmvh2qgdfqgg11a1jp3vu3j"
+  ],
   "coursework_ids": [],
-  "email_ids": []
+  "email_ids": [
+    "19ffcd675a84097d",
+    "19ffcd675a84097d",
+    "19ffd9df2ab81dd9",
+    "19ffbce7a1f57c32",
+    "19ffbcde96003318",
+    "19ffbcbc8ca41371",
+    "19ffafef2e3d1b4a",
+    "19ff7b764293bf10",
+    "19ff7b764293bf10",
+    "19ff79e3fe47c8a1",
+    "19ff79a742abbc38",
+    "19ff78055558b09a",
+    "19ff7568fefd36bb",
+    "19ff6c9ffd83095a",
+    "19ff68c57eb689a6",
+    "19ffe8d9a12be380",
+    "19ffe8d01d0fbf47",
+    "19ffcd64745c7b4b",
+    "19ffcd64745c7b4b",
+    "19ffe873c5ccf096",
+    "19ffcd81e846899b",
+    "19ffe7e1a75beed3",
+    "19ffdb8d1ad9692a",
+    "19ffdb634ae1e4ce",
+    "19ffd6e8f11e0250",
+    "19ffd6e8f11e0250",
+    "19ffd6a2c57fe1b2",
+    "19ffd64265949179",
+    "19ffd600b3d739e4",
+    "19ffd52625758542"
+  ]
 }
