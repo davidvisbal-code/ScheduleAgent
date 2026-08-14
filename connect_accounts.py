@@ -24,7 +24,7 @@ CONFIG = {
     "gmail_personal":    {"toolkit": "gmail",           "user_id": "david", "allow_multiple": True},
     "calendar_school":   {"toolkit": "googlecalendar",  "user_id": "david", "allow_multiple": False},
     "calendar_personal": {"toolkit": "googlecalendar",  "user_id": "david", "allow_multiple": True},
-    "classroom":         {"toolkit": "googleclassroom", "user_id": "david", "allow_multiple": False},
+    "classroom":         {"toolkit": "googleclassroom", "user_id": "david", "allow_multiple": True},
     "whatsapp":          {"toolkit": "whatsapp",        "user_id": "david", "allow_multiple": False},
 }
 
