@@ -27,6 +27,7 @@ on:
         default: gmail_school
 
 env:
+  PYTHONUNBUFFERED: "1"
   COMPOSIO_API_KEY: ${{ secrets.COMPOSIO_API_KEY }}
   ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
   WHATSAPP_PHONE_NUMBER_ID: ${{ secrets.WHATSAPP_PHONE_NUMBER_ID }}
