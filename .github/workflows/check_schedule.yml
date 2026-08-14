@@ -1,5 +1,8 @@
 name: Schedule agent
 
+permissions:
+  contents: write
+
 on:
   schedule:
     # Change detection: every 15 minutes. GitHub does not guarantee exact
@@ -15,8 +18,13 @@ on:
       script:
         description: "Which script to run manually"
         type: choice
-        options: [main.py, send_digest.py, plan_week.py, list_accounts.py]
+        options: [main.py, send_digest.py, plan_week.py, list_accounts.py, connect_accounts.py]
         default: main.py
+      account_to_connect:
+        description: "Only used when script=connect_accounts.py"
+        type: choice
+        options: [gmail_school, gmail_personal, calendar_school, calendar_personal, classroom, whatsapp]
+        default: gmail_school
 
 env:
   COMPOSIO_API_KEY: ${{ secrets.COMPOSIO_API_KEY }}
@@ -29,6 +37,7 @@ env:
   CALENDAR_PERSONAL_ACCOUNT_ID: ${{ secrets.CALENDAR_PERSONAL_ACCOUNT_ID }}
   CLASSROOM_ACCOUNT_ID: ${{ secrets.CLASSROOM_ACCOUNT_ID }}
   WHATSAPP_ACCOUNT_ID: ${{ secrets.WHATSAPP_ACCOUNT_ID }}
+  ACCOUNT_TO_CONNECT: ${{ github.event.inputs.account_to_connect }}
 
 jobs:
   run:
