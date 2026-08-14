@@ -1,6 +1,5 @@
 {
   "calendar_ids": [
-    "64cus06avkt8n8dgut1g6nq3be",
     "4heegqvb82i48dekanu9hcqh5p_20260818T143500Z",
     "59u5roa474pnl2rg7ojnss37v0_20260820T152900Z",
     "ltrr9u0b45j4qvh6e4v7uei3fj_20260820T175300Z",
@@ -11,6 +10,9 @@
   ],
   "coursework_ids": [],
   "email_ids": [
+    "1a001e02add3c1df",
+    "1a001c04dcf2c980",
+    "1a001bb31c89313d",
     "1a000a11e011ef36",
     "1a0008a6484c8d32",
     "19ffd9df2ab81dd9",
@@ -23,9 +25,7 @@
     "19ff79e3fe47c8a1",
     "19ff79a742abbc38",
     "19ff78055558b09a",
-    "19ff7568fefd36bb",
-    "19ff6c9ffd83095a",
-    "19ff68c57eb689a6",
+    "1a001958638201a5",
     "1a000d176f113263",
     "1a000573c7699bc4",
     "19ffe8d9a12be380",
@@ -39,7 +39,6 @@
     "19ffdb634ae1e4ce",
     "19ffd6e8f11e0250",
     "19ffd6e8f11e0250",
-    "19ffd6a2c57fe1b2",
-    "19ffd64265949179"
+    "19ffd6a2c57fe1b2"
   ]
 }
