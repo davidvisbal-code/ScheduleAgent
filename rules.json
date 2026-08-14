@@ -25,5 +25,36 @@
     "all_classroom_coursework_is_immovable": true,
     "accepted_calendar_invites_are_immovable_but_alert_on_new_conflicts": true,
     "default_for_unmatched_events": "movable"
+  },
+
+  "weekly_planner": {
+    "_comment": "Defaults for plan_week.py, which now runs every morning as a rolling 7-day planner (today through +6 days), not once a week. Edit freely -- these are starting assumptions, not fixed rules.",
+    "school_end_time": "16:00",
+    "bedtime": "22:30",
+    "wake_time": "06:30",
+    "post_school_rest_buffer_minutes": 45,
+    "immediate_due_date_threshold_days": 2,
+    "priority_order": ["rest", "immediate_due_dates", "social", "study", "exercise", "other_movable"],
+    "friday_is_work_day": true,
+    "friday_work_task_source": "gmail_personal",
+    "colombia_holiday_calendar_id": "es.co#holiday@group.v.calendar.google.com",
+    "auto_create_events": true,
+    "auto_planned_event_prefix": "\ud83d\uddd3\ufe0f Auto:"
+  },
+
+  "spam_filters": {
+    "_comment": "Emails matching these (sender or subject, case-insensitive) are ignored when scanning personal Gmail -- prevents university/marketing blasts from being read as real tasks.",
+    "sender_or_subject_contains": [
+      "noreply",
+      "no-reply",
+      "unsubscribe",
+      "newsletter",
+      "admissions",
+      "scholarship",
+      "marketing",
+      "webinar",
+      "open house",
+      "apply now"
+    ]
   }
 }

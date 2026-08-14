@@ -1,11 +1,13 @@
 """
-Run this once a week, on Wednesdays (a fresh run before the day starts, e.g.
-6:00 AM). Builds a full plan from THIS Wednesday through next Tuesday,
-working around fixed commitments (classes, accepted meetings, Classroom
-due dates) and filling open time according to rules.json's priority order.
-Creates events directly on your calendar (auto_create_events: true in
-rules.json) tagged with the "🗓️ Auto:" prefix so they're easy to find,
-edit, or bulk-delete if a week goes sideways.
+Run this EVERY MORNING (e.g. 6:00 AM). Builds a rolling 7-day plan --
+today through 6 days out -- working around fixed commitments (classes,
+accepted meetings, Classroom due dates) and filling open time according to
+rules.json's priority order. Since this runs daily, it first clears out
+YESTERDAY's auto-added events for the coming days and rebuilds fresh, so
+the plan always reflects the current state rather than piling up duplicates.
+
+Everything is written to your SCHOOL calendar (not personal), with a
+10-minute-before reminder set on every auto-created event.
 
 Holidays/weekends and Fridays (your work day) get different treatment --
 see build_day_plan() below.
@@ -28,10 +30,9 @@ ACCOUNTS = {
     "calendar_school": os.environ.get("CALENDAR_SCHOOL_ACCOUNT_ID", "").strip() or None,
     "classroom": os.environ.get("CLASSROOM_ACCOUNT_ID", "").strip() or None,
 }
-# Everything gets written to ONE calendar (your personal one), even though
-# source data (classes, school invites) comes from the school account --
-# matches "everything should be managed on one account."
-WRITE_TARGET_ACCOUNT = "calendar_personal"
+# Everything gets written to your SCHOOL calendar so reminders/notifications
+# (10 min before) show up the same place your other school events do.
+WRITE_TARGET_ACCOUNT = "calendar_school"
 
 BASE_DIR = Path(__file__).parent
 RULES_FILE = BASE_DIR / "rules.json"
@@ -79,12 +80,10 @@ def run_tool(tool_slug, arguments, account_key):
 
 
 def get_week_range():
-    """This Wednesday through next Tuesday (inclusive), based on today's date."""
+    """Rolling 7-day window: today through 6 days from now."""
     today = datetime.date.today()
-    days_since_wed = (today.weekday() - 2) % 7  # Monday=0 ... Wednesday=2
-    wed = today - datetime.timedelta(days=days_since_wed)
-    tue = wed + datetime.timedelta(days=6)
-    return wed, tue
+    end = today + datetime.timedelta(days=6)
+    return today, end
 
 
 def fetch_holidays(rules, start, end):
@@ -253,6 +252,33 @@ An empty array is a valid answer if nothing needs to be added today."""
         return []
 
 
+def delete_previous_auto_events(rules, start, end):
+    """Since this runs daily, clear out auto-created events still in the
+    upcoming window before rebuilding -- keeps the plan 'ready to modify'
+    instead of piling up duplicates every morning."""
+    prefix = rules["weekly_planner"]["auto_planned_event_prefix"]
+    data = run_tool(
+        "GOOGLECALENDAR_EVENTS_LIST",
+        {
+            "calendarId": "primary",
+            "timeMin": f"{start.isoformat()}T00:00:00Z",
+            "timeMax": f"{end.isoformat()}T23:59:59Z",
+            "q": prefix,
+            "singleEvents": True,
+        },
+        WRITE_TARGET_ACCOUNT,
+    )
+    if not data:
+        return
+    for ev in data.get("items", []):
+        if ev.get("summary", "").startswith(prefix):
+            run_tool(
+                "GOOGLECALENDAR_DELETE_EVENT",
+                {"calendarId": "primary", "eventId": ev["id"]},
+                WRITE_TARGET_ACCOUNT,
+            )
+
+
 def create_event(rules, day, block):
     prefix = rules["weekly_planner"]["auto_planned_event_prefix"]
     run_tool(
@@ -263,6 +289,10 @@ def create_event(rules, day, block):
             "description": block.get("reason", ""),
             "start": {"dateTime": f"{day.isoformat()}T{block['start_time']}:00"},
             "end": {"dateTime": f"{day.isoformat()}T{block['end_time']}:00"},
+            "reminders": {
+                "useDefault": False,
+                "overrides": [{"method": "popup", "minutes": 10}],
+            },
         },
         WRITE_TARGET_ACCOUNT,
     )
@@ -272,12 +302,14 @@ def main():
     rules = load_json(RULES_FILE, {})
     start, end = get_week_range()
 
+    delete_previous_auto_events(rules, start, end)
+
     holidays = fetch_holidays(rules, start, end)
     existing_events = fetch_existing_events(start, end)
     due_items = fetch_due_dates(start, end)
     friday_tasks = fetch_friday_work_tasks(rules)
 
-    summary_lines = [f"📆 Weekly plan built: {start.strftime('%a %b %d')} → {end.strftime('%a %b %d')}"]
+    summary_lines = [f"📆 7-day plan refreshed: {start.strftime('%a %b %d')} → {end.strftime('%a %b %d')}"]
 
     day = start
     while day <= end:
