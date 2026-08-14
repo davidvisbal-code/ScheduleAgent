@@ -53,7 +53,10 @@ else:
 
 kwargs = {"user_id": user_id, "auth_config_id": auth_config_id}
 
-connection_request = composio.connected_accounts.link(user_id, auth_config_id)
+if cfg["allow_multiple"]:
+    connection_request = composio.connected_accounts.link(user_id, auth_config_id, allow_multiple=True)
+else:
+    connection_request = composio.connected_accounts.link(user_id, auth_config_id)
 
 print("\n" + "=" * 70)
 print("OPEN THIS URL IN YOUR BROWSER AND LOG IN / APPROVE ACCESS:")
