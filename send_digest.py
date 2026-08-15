@@ -44,6 +44,8 @@ def main():
             "text": text[:4000],
         },
         connected_account_id=WHATSAPP_ACCOUNT_ID,
+        user_id="david",
+        dangerously_skip_version_check=True,
     )
 
     DIGEST_QUEUE_FILE.write_text("[]")
