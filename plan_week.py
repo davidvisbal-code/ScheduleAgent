@@ -341,6 +341,12 @@ An empty array is a valid answer if nothing needs to be added today."""
     )
     text_blocks = [block.text for block in response.content if getattr(block, "type", None) == "text"]
     raw = "".join(text_blocks).strip()
+    # Be tolerant of any stray text around the actual JSON array, instead of
+    # requiring the whole response to be pure JSON (which kept failing).
+    start_idx = raw.find("[")
+    end_idx = raw.rfind("]")
+    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
+        raw = raw[start_idx:end_idx + 1]
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
@@ -377,18 +383,24 @@ def delete_previous_auto_events(rules, start, end):
 
 def create_event(rules, day, block):
     prefix = rules["weekly_planner"]["auto_planned_event_prefix"]
+
+    start_h, start_m = (int(x) for x in block["start_time"].split(":"))
+    end_h, end_m = (int(x) for x in block["end_time"].split(":"))
+    total_minutes = (end_h * 60 + end_m) - (start_h * 60 + start_m)
+    if total_minutes <= 0:
+        total_minutes += 24 * 60  # handles a block that crosses midnight
+
     run_tool(
         "GOOGLECALENDAR_CREATE_EVENT",
         {
-            "calendarId": "primary",
+            "calendar_id": "primary",
             "summary": f"{prefix} {block['title']}",
             "description": block.get("reason", ""),
-            "start": {"dateTime": f"{day.isoformat()}T{block['start_time']}:00"},
-            "end": {"dateTime": f"{day.isoformat()}T{block['end_time']}:00"},
-            "reminders": {
-                "useDefault": False,
-                "overrides": [{"method": "popup", "minutes": 10}],
-            },
+            "start_datetime": f"{day.isoformat()}T{block['start_time']}:00",
+            "timezone": "America/Bogota",
+            "event_duration_hour": total_minutes // 60,
+            "event_duration_minutes": total_minutes % 60,
+            "create_meeting_room": False,
         },
         WRITE_TARGET_ACCOUNT,
     )
