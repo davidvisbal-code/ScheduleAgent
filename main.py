@@ -15,6 +15,7 @@ Actions, every 15 min minimum reliably). See README.md for setup.
 import os
 import json
 import datetime
+import html
 from pathlib import Path
 
 from composio import Composio
@@ -296,7 +297,7 @@ def main():
                 continue  # duplicate subject in the same run (e.g. repeated alerts)
             seen_subjects_this_run.add(subject)
 
-            snippet = (msg.get("preview", {}) or {}).get("body", "")[:120].replace("\n", " ").strip()
+            snippet = html.unescape((msg.get("preview", {}) or {}).get("body", "")[:120].replace("\n", " ").strip())
             sender_name = sender.split("<")[0].strip() or sender
             detail = f' -- from {sender_name}: "{snippet}..."' if snippet else f" -- from {sender_name}"
             messages.append(f"📧 New email ({key.replace('gmail_', '')}): {subject}{detail}")
