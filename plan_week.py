@@ -350,7 +350,11 @@ An empty array is a valid answer if nothing needs to be added today."""
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        print(f"[warn] Couldn't parse Claude's plan for {day}: {raw[:200]}")
+        block_types = [getattr(b, "type", "?") for b in response.content]
+        print(f"[warn] Couldn't parse Claude's plan for {day}. "
+              f"stop_reason={getattr(response, 'stop_reason', '?')}, "
+              f"block_types={block_types}, raw_length={len(raw)}, "
+              f"raw_preview={raw[:200]!r}")
         return []
 
 

@@ -37,19 +37,26 @@ user_id = cfg["user_id"]
 
 print(f"\n=== Connecting: {TARGET} (toolkit: {toolkit}) ===\n")
 
-# Find or create an auth config for this toolkit (Composio's default
-# managed auth -- no separate OAuth app needed for these toolkits).
-auth_configs = composio.auth_configs.list(toolkit_slug=toolkit)
-if auth_configs.items:
-    auth_config_id = auth_configs.items[0].id
-    print(f"Using existing auth config: {auth_config_id}")
+# If you made a specific auth config yourself (e.g. one with proper
+# Classroom scopes via Composio's dashboard), set an env var like
+# GYM_AUTH_CONFIG_ID_OVERRIDE / CLASSROOM_AUTH_CONFIG_ID_OVERRIDE to force
+# using it, instead of auto-detecting/creating one that might be too narrow.
+override_id = os.environ.get(f"{TARGET.upper()}_AUTH_CONFIG_ID_OVERRIDE", "").strip()
+if override_id:
+    auth_config_id = override_id
+    print(f"Using manually specified auth config: {auth_config_id}")
 else:
-    new_config = composio.auth_configs.create(
-        toolkit=toolkit,
-        options={"type": "use_composio_managed_auth"},
-    )
-    auth_config_id = new_config.id
-    print(f"Created new auth config: {auth_config_id}")
+    auth_configs = composio.auth_configs.list(toolkit_slug=toolkit)
+    if auth_configs.items:
+        auth_config_id = auth_configs.items[0].id
+        print(f"Using existing auth config: {auth_config_id}")
+    else:
+        new_config = composio.auth_configs.create(
+            toolkit=toolkit,
+            options={"type": "use_composio_managed_auth"},
+        )
+        auth_config_id = new_config.id
+        print(f"Created new auth config: {auth_config_id}")
 
 kwargs = {"user_id": user_id, "auth_config_id": auth_config_id}
 
