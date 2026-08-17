@@ -206,6 +206,7 @@ you're texting him a heads-up. Do not take any action, just recommend."""
     response = claude.messages.create(
         model="claude-sonnet-5",
         max_tokens=300,
+        thinking={"type": "disabled"},
         messages=[{"role": "user", "content": prompt}],
     )
     text_blocks = [block.text for block in response.content if getattr(block, "type", None) == "text"]

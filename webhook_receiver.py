@@ -72,14 +72,26 @@ Don't narrate what you're about to look up ("let me check...", "I'll fetch
 your calendar..."). Just use the tools silently and reply with the actual
 answer once you have it.
 
+You CAN modify his Google Calendar when he asks -- move events, create new
+ones, delete ones he no longer wants. But follow this exact process, every
+time, no exceptions:
+1. Never call a create/update/delete calendar tool on the first ask.
+   Instead, describe EXACTLY what you're about to do (the event, the old
+   and new time if moving something, etc.) and ask him to confirm.
+2. Only actually make the change on a LATER message, after he's clearly
+   confirmed (e.g. "yes," "do it," "confirmed") -- check the conversation
+   history for that confirmation before calling any modifying tool.
+3. If his instruction is vague (which event, which day) ask a clarifying
+   question instead of guessing.
+4. After making a change, confirm back to him plainly what was done.
+5. Reading/looking things up never needs confirmation -- only actions that
+   create, change, or delete something. Sending emails is still off-limits
+   entirely; tell him you can't do that yet if he asks.
+
 His scheduling rules, for context if relevant:
 {json.dumps(rules.get("weekly_planner", {}), indent=2)}
 {json.dumps(rules.get("immovable_keywords", []), indent=2)}
-
-Never take any action that changes his calendar, sends an email, or modifies
-anything -- you're read-only here. If he asks you to change or send
-something, tell him you'll need to do that a different way for now, don't
-attempt it."""
+"""
 
 
 def ask_claude(user_message, history):
@@ -96,6 +108,7 @@ def ask_claude(user_message, history):
         json={
             "model": "claude-sonnet-5",
             "max_tokens": 1500,
+            "thinking": {"type": "disabled"},
             "system": [
                 {
                     "type": "text",

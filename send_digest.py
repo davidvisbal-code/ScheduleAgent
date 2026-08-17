@@ -94,6 +94,7 @@ Write David a short morning debrief covering all of this. Rules:
         json={
             "model": "claude-sonnet-5",
             "max_tokens": 1500,
+            "thinking": {"type": "disabled"},
             "messages": [{"role": "user", "content": prompt}],
             "mcp_servers": [
                 {
