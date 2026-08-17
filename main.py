@@ -208,7 +208,8 @@ you're texting him a heads-up. Do not take any action, just recommend."""
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )
-    return response.content[0].text
+    text_blocks = [block.text for block in response.content if getattr(block, "type", None) == "text"]
+    return "".join(text_blocks).strip()
 
 
 # ---------- MAIN ----------

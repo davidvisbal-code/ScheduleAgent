@@ -339,7 +339,8 @@ An empty array is a valid answer if nothing needs to be added today."""
         ],
         messages=[{"role": "user", "content": prompt}],
     )
-    raw = response.content[0].text.strip()
+    text_blocks = [block.text for block in response.content if getattr(block, "type", None) == "text"]
+    raw = "".join(text_blocks).strip()
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
