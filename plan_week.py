@@ -213,7 +213,14 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
         if e.get("start", {}).get("dateTime", e.get("start", {}).get("date", "")).startswith(day.isoformat())
     ]
     day_due = [d for d in due_items if d["due_date"] == day]
-    days_until = {d["title"]: (d["due_date"] - datetime.date.today()).days for d in due_items}
+    # Relative to THIS specific day being planned, not real "today" -- the
+    # old version always used real today, so something due tomorrow looked
+    # "due today" on every single day of the week, forever, even after it
+    # actually passed. That's the MaryMUN bug.
+    days_until = {d["title"]: (d["due_date"] - day).days for d in due_items}
+    # Anything already past due (relative to this day) shouldn't get study
+    # time scheduled for it at all -- there's nothing left to do.
+    still_relevant_due_items = [d for d in due_items if (d["due_date"] - day).days >= 0]
 
     weekday_name = day.strftime("%A")
     tomorrow_name = (day + datetime.timedelta(days=1)).strftime("%A")
@@ -267,7 +274,7 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
         ],
         "due_today_or_soon": [
             {"title": d["title"], "course": d["course"], "days_until_due": days_until.get(d["title"], None)}
-            for d in due_items
+            for d in still_relevant_due_items
         ],
         "friday_work_emails": friday_tasks if is_friday else [],
         "priority_order": rules["weekly_planner"]["priority_order"],
@@ -297,6 +304,10 @@ Rules:
   extracurricular_today is set, use ITS end_time instead, plus commute.
 - lunch_at_school_today means no need to schedule a lunch/cooking block at
   home; otherwise assume lunch happens shortly after arriving home.
+- due_today_or_soon only ever contains things not yet past due as of THIS
+  specific day -- if something isn't listed, it's either not due soon or
+  already passed, so never invent make-up study time for something whose
+  deadline has already gone by.
 - Track toward gym_target_sessions_per_week (3) across the week using
   gym_sessions_already_this_week. If today is Monday or Wednesday and
   gym_before_school_today is true but gym_done_today_already is false,
@@ -386,6 +397,17 @@ def delete_previous_auto_events(rules, start, end):
             )
 
 
+def color_for_block(title, rules):
+    colors = rules["weekly_planner"]["weekday_block_style"].get("category_colors", {})
+    for category, color_id in colors.items():
+        if category.startswith("_"):
+            continue  # skip the _comment key
+        if title.startswith(category):
+            return color_id
+    return None  # unrecognized category, let Google Calendar use its default
+
+
+
 def create_event(rules, day, block):
     prefix = rules["weekly_planner"]["auto_planned_event_prefix"]
 
@@ -395,20 +417,21 @@ def create_event(rules, day, block):
     if total_minutes <= 0:
         total_minutes += 24 * 60  # handles a block that crosses midnight
 
-    run_tool(
-        "GOOGLECALENDAR_CREATE_EVENT",
-        {
-            "calendar_id": "primary",
-            "summary": f"{prefix} {block['title']}",
-            "description": block.get("reason", ""),
-            "start_datetime": f"{day.isoformat()}T{block['start_time']}:00",
-            "timezone": "America/Bogota",
-            "event_duration_hour": total_minutes // 60,
-            "event_duration_minutes": total_minutes % 60,
-            "create_meeting_room": False,
-        },
-        WRITE_TARGET_ACCOUNT,
-    )
+    arguments = {
+        "calendar_id": "primary",
+        "summary": f"{prefix} {block['title']}",
+        "description": block.get("reason", ""),
+        "start_datetime": f"{day.isoformat()}T{block['start_time']}:00",
+        "timezone": "America/Bogota",
+        "event_duration_hour": total_minutes // 60,
+        "event_duration_minutes": total_minutes % 60,
+        "create_meeting_room": False,
+    }
+    color_id = color_for_block(block["title"], rules)
+    if color_id:
+        arguments["color_id"] = color_id
+
+    run_tool("GOOGLECALENDAR_CREATE_EVENT", arguments, WRITE_TARGET_ACCOUNT)
 
 
 def main():

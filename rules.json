@@ -48,6 +48,16 @@
     "weekday_block_style": {
       "fully_blocked": true,
       "category_labels": ["Golden Hour", "Movement", "Study", "Self Care", "Break", "Gym", "Wind Down"],
+      "category_colors": {
+        "_comment": "Google Calendar colorId values (1-11), matching real named colors in the Calendar app's own picker.",
+        "Golden Hour": "5",
+        "Movement": "9",
+        "Study": "7",
+        "Self Care": "10",
+        "Break": "8",
+        "Gym": "6",
+        "Wind Down": "1"
+      },
       "notes": "On school days (not weekends, not holidays), fill essentially the ENTIRE day from wake_time to the bedtime target with labeled blocks -- no unlabeled gaps except real transitions (commute, meals already covered by lunch_at_school logic). Every new block's title should start with one of category_labels so the day reads like a fully structured routine, not scattered free time. This does NOT apply on weekends/holidays -- those stay governed by weekend_open_ratio instead."
     },
     "counselor_meetings": {
