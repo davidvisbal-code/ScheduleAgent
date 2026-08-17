@@ -1,7 +1,9 @@
 """
 Run this once a day (e.g. 7:00 AM) on a separate schedule from main.py.
-Collects everything main.py queued overnight/during the day and sends it as
-ONE WhatsApp message instead of many separate pings.
+Collects everything main.py queued overnight/during the day, has Claude
+organize and prioritize it into ONE clean summary (dropping anything
+trivial, grouping by category), and sends that via the approved WhatsApp
+template instead of many separate pings.
 
 Sends via the APPROVED TEMPLATE (not free-form text) since this message is
 unprompted (business-initiated) -- WhatsApp blocks free-form text outside a
@@ -14,6 +16,9 @@ import json
 import requests
 from pathlib import Path
 
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
+COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"].strip()  # same combined MCP URL the chat bot uses
 WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"].strip()
 WHATSAPP_TO_NUMBER = os.environ["WHATSAPP_TO_NUMBER"].strip()
 WHATSAPP_ACCESS_TOKEN = os.environ["WHATSAPP_ACCESS_TOKEN"].strip()  # System User permanent token
@@ -36,6 +41,81 @@ def sanitize_for_template(text):
     return text
 
 
+def organize_with_claude(raw_items):
+    """Take the raw queued lines (already tagged ⚠️/📅/📚/📧) and have Claude
+    turn them into ONE organized, prioritized recap. Claude has LIVE access
+    to Gmail/Calendar/Classroom/Drive here -- for anything that needs more
+    context than the title/subject alone (a full email body, a Classroom
+    assignment's actual instructions, a linked Doc/Slide/Sheet), it should
+    actually open and read it before writing the summary, not guess from
+    the title."""
+    prompt = f"""Here are the raw events detected overnight/today, already
+tagged by type (⚠️ = urgent conflict, 📅 = calendar, 📚 = classroom
+coursework, 📧 = email):
+
+{json.dumps(raw_items, indent=2)}
+
+You have live access to David's Gmail, Google Calendar, Google Classroom,
+and Google Drive through the tools available to you. USE THEM: for any item
+above where the title/subject alone isn't enough to actually inform David
+(a classroom assignment whose real instructions matter, an email whose body
+has the actual details, a linked Doc/Slide/Sheet with content he needs),
+look it up and read it before writing the summary. Don't just repeat the
+raw title back to him -- tell him what it actually says.
+
+Write David a short morning debrief covering all of this. Rules:
+- Group by category, most important first: conflicts, then classroom
+  assignments/due dates (with real content, e.g. "Physics: problem set on
+  momentum, due Friday" not just "New coursework: Assignment 3"), then
+  calendar changes, then emails.
+- For emails, only mention ones that seem genuinely worth knowing about
+  (school administrative notices, teacher messages, anything actionable) --
+  skip marketing, generic notifications, anything unimportant. For the ones
+  you do mention, summarize what the email actually says, not just the
+  subject line.
+- If a Classroom post or email links to a Doc/Slide/Sheet with real
+  instructions or content, open it and pull out what's actually relevant.
+- Keep it conversational and brief, like a text from a friend catching you
+  up, not a bulleted report.
+- CRITICAL: your entire response must be ONE continuous block with NO line
+  breaks of any kind (WhatsApp template limitation) -- use " • " between
+  distinct points instead of new lines. Keep it under 900 characters total.
+- If, after filtering, nothing is actually worth mentioning, just say so in
+  one short sentence."""
+
+    response = requests.post(
+        "https://api.anthropic.com/v1/messages",
+        headers={
+            "x-api-key": ANTHROPIC_API_KEY,
+            "anthropic-version": "2023-06-01",
+            "anthropic-beta": "mcp-client-2025-04-04",  # MCP connector is a beta feature
+            "content-type": "application/json",
+        },
+        json={
+            "model": "claude-sonnet-5",
+            "max_tokens": 1500,
+            "messages": [{"role": "user", "content": prompt}],
+            "mcp_servers": [
+                {
+                    "type": "url",
+                    "url": COMPOSIO_MCP_URL,
+                    "name": "composio-school-tools",
+                    "authorization_token": COMPOSIO_API_KEY,
+                }
+            ],
+        },
+        timeout=120,  # tool calls take longer than a plain text response
+    )
+    data = response.json()
+    if "content" not in data:
+        print(f"[digest] Claude organize call failed, falling back to raw list: {data}")
+        return sanitize_for_template(" • ".join(raw_items))
+
+    text_parts = [block["text"] for block in data["content"] if block.get("type") == "text"]
+    text = "".join(text_parts).strip()
+    return sanitize_for_template(text) if text else sanitize_for_template(" • ".join(raw_items))
+
+
 def build_digest_text():
     if not DIGEST_QUEUE_FILE.exists():
         queue = []
@@ -45,10 +125,8 @@ def build_digest_text():
     if not queue:
         return queue, "Nothing new overnight -- your schedule's unchanged."
 
-    urgent = [item["text"] for item in queue if item["text"].startswith("⚠️")]
-    routine = [item["text"] for item in queue if not item["text"].startswith("⚠️")]
-    ordered = urgent + routine
-    return queue, sanitize_for_template("\n\n".join(ordered))
+    raw_items = [item["text"] for item in queue]
+    return queue, organize_with_claude(raw_items)
 
 
 def main():

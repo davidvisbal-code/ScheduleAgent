@@ -272,8 +272,10 @@ def main():
             due_str = f"{due.get('month')}/{due.get('day')}/{due.get('year')}" if due else "no due date"
             messages.append(f"📚 New coursework in {item.get('_courseName')}: \"{item.get('title')}\" (due {due_str})")
 
-    # --- Gmail (school + personal), lightweight: just flag new messages exist ---
+    # --- Gmail (school + personal): filter spam/noise, dedupe, add context ---
     new_email_ids = []
+    seen_subjects_this_run = set()
+    spam_terms = rules.get("spam_filters", {}).get("sender_or_subject_contains", [])
     for key in ("gmail_school", "gmail_personal"):
         emails = fetch_recent_emails(key)
         for msg in emails:
@@ -281,9 +283,23 @@ def main():
             if not mid:
                 continue
             new_email_ids.append(mid)
-            if mid not in state["email_ids"]:
-                subject = msg.get("subject", "(no subject)")
-                messages.append(f"📧 New email ({key.replace('gmail_', '')}): {subject}")
+            if mid in state["email_ids"]:
+                continue
+
+            subject = msg.get("subject", "(no subject)")
+            sender = (msg.get("sender") or msg.get("from") or "").lower()
+            subject_lower = subject.lower()
+
+            if any(term in sender or term in subject_lower for term in spam_terms):
+                continue  # filtered out as marketing/notification noise
+            if subject in seen_subjects_this_run:
+                continue  # duplicate subject in the same run (e.g. repeated alerts)
+            seen_subjects_this_run.add(subject)
+
+            snippet = (msg.get("preview", {}) or {}).get("body", "")[:120].replace("\n", " ").strip()
+            sender_name = sender.split("<")[0].strip() or sender
+            detail = f' -- from {sender_name}: "{snippet}..."' if snippet else f" -- from {sender_name}"
+            messages.append(f"📧 New email ({key.replace('gmail_', '')}): {subject}{detail}")
 
     # --- Queue for next morning digest + persist ---
     for m in messages:

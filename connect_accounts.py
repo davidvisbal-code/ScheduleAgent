@@ -24,7 +24,7 @@ CONFIG = {
     "gmail_personal":    {"toolkit": "gmail",           "user_id": "david", "allow_multiple": True},
     "calendar_school":   {"toolkit": "googlecalendar",  "user_id": "david", "allow_multiple": False},
     "calendar_personal": {"toolkit": "googlecalendar",  "user_id": "david", "allow_multiple": True},
-    "classroom":         {"toolkit": "googleclassroom", "user_id": "david", "allow_multiple": True},
+    "classroom":         {"toolkit": "googleclassroom", "user_id": "david", "allow_multiple": False},
     "whatsapp":          {"toolkit": "whatsapp",        "user_id": "david", "allow_multiple": False},
 }
 
@@ -52,6 +52,18 @@ else:
     print(f"Created new auth config: {auth_config_id}")
 
 kwargs = {"user_id": user_id, "auth_config_id": auth_config_id}
+
+# Clean up any incomplete/failed leftover connections from earlier attempts
+# tonight, so we end up with exactly one real account, not duplicates.
+existing = composio.connected_accounts.list(user_ids=[user_id], auth_config_ids=[auth_config_id])
+for acc in existing.items:
+    if acc.status != "ACTIVE":
+        print(f"Removing incomplete leftover connection: {acc.id} (status: {acc.status})")
+        composio.connected_accounts.delete(acc.id)
+    elif not cfg["allow_multiple"]:
+        print(f"Found an already-ACTIVE connection ({acc.id}) and this toolkit doesn't allow multiple.")
+        print(f"If you actually want to replace it, delete it manually in Composio first, then re-run this.")
+        raise SystemExit(1)
 
 if cfg["allow_multiple"]:
     connection_request = composio.connected_accounts.link(user_id, auth_config_id, allow_multiple=True)

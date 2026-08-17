@@ -69,7 +69,7 @@
   },
 
   "spam_filters": {
-    "_comment": "Emails matching these (sender or subject, case-insensitive) are ignored when scanning personal Gmail -- prevents university/marketing blasts from being read as real tasks.",
+    "_comment": "Emails matching these (sender or subject, case-insensitive) are ignored entirely -- never queued as 'new email', never shown in the digest. Applies to both school and personal Gmail.",
     "sender_or_subject_contains": [
       "noreply",
       "no-reply",
@@ -80,7 +80,13 @@
       "marketing",
       "webinar",
       "open house",
-      "apply now"
+      "apply now",
+      "alertas y notificaciones",
+      "notification",
+      "which major",
+      "which university",
+      "career quiz",
+      "info session"
     ]
   }
 }
