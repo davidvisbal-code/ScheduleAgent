@@ -27,6 +27,15 @@ BASE_DIR = Path(__file__).parent
 DIGEST_QUEUE_FILE = BASE_DIR / "digest_queue.json"
 
 
+def sanitize_for_template(text):
+    """WhatsApp template parameters can't contain newlines/tabs or 4+
+    consecutive spaces (allowed in free-form text, not templates)."""
+    text = text.replace("\n\n", " • ").replace("\n", " • ").replace("\t", " ")
+    while "    " in text:  # collapse any run of 4+ spaces
+        text = text.replace("    ", " ")
+    return text
+
+
 def build_digest_text():
     if not DIGEST_QUEUE_FILE.exists():
         queue = []
@@ -39,7 +48,7 @@ def build_digest_text():
     urgent = [item["text"] for item in queue if item["text"].startswith("⚠️")]
     routine = [item["text"] for item in queue if not item["text"].startswith("⚠️")]
     ordered = urgent + routine
-    return queue, "\n\n".join(ordered)
+    return queue, sanitize_for_template("\n\n".join(ordered))
 
 
 def main():
