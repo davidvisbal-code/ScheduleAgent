@@ -203,7 +203,7 @@ enough to skip part of it) in 2-3 sentences, written directly to David as if
 you're texting him a heads-up. Do not take any action, just recommend."""
 
     response = claude.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-5",
         max_tokens=300,
         messages=[{"role": "user", "content": prompt}],
     )

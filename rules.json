@@ -28,11 +28,37 @@
   },
 
   "weekly_planner": {
-    "_comment": "Defaults for plan_week.py, which now runs every morning as a rolling 7-day planner (today through +6 days), not once a week. Edit freely -- these are starting assumptions, not fixed rules.",
-    "school_end_time": "16:00",
-    "bedtime": "22:30",
-    "wake_time": "06:30",
-    "post_school_rest_buffer_minutes": 45,
+    "_comment": "Defaults for plan_week.py, which runs every morning as a rolling 7-day planner (today through +6 days). daily_schedule below holds David's real fixed facts per weekday -- Claude uses these directly when reasoning about each day.",
+    "daily_schedule": {
+      "Monday":    {"wake_time": "04:30", "gym_before_school": true,  "school_end_time": "15:00", "extracurricular": null, "lunch_at_school": false, "notes": "Gym + sauna morning. Every OTHER Monday: baseball after school until 16:30, lunch at school that day instead."},
+      "Tuesday":   {"wake_time": "06:00", "gym_before_school": false, "school_end_time": "15:00", "extracurricular": {"name": "Baseball", "end_time": "16:30"}, "lunch_at_school": true, "notes": null},
+      "Wednesday": {"wake_time": "04:30", "gym_before_school": true,  "school_end_time": "15:00", "extracurricular": {"name": "MUN", "end_time": "16:30"}, "lunch_at_school": true, "notes": "Gym + sauna morning AND MUN after school -- long day."},
+      "Thursday":  {"wake_time": "06:00", "gym_before_school": false, "school_end_time": "15:00", "extracurricular": {"name": "Baseball", "end_time": "16:30"}, "lunch_at_school": true, "notes": null},
+      "Friday":    {"wake_time": "06:00", "gym_before_school": false, "school_end_time": "15:00", "extracurricular": null, "lunch_at_school": false, "notes": "Backup gym day if Mon/Wed morning session got skipped. Work day (see friday_is_work_day below)."},
+      "Saturday":  {"wake_time": null, "gym_before_school": false, "school_end_time": null, "extracurricular": null, "lunch_at_school": false, "notes": "Backup gym day option. Otherwise flexible/holiday-style day."},
+      "Sunday":    {"wake_time": null, "gym_before_school": false, "school_end_time": null, "extracurricular": null, "lunch_at_school": false, "notes": "Flexible/holiday-style day."}
+    },
+    "commute_minutes": 30,
+    "gym_target_sessions_per_week": 3,
+    "gym_makeup_priority": "If a scheduled Mon/Wed morning gym+sauna session gets skipped, first try an afternoon slot that SAME day (Mon or Wed) after school. If that's also not possible, add a lighter/less rigorous makeup session on Friday, then Saturday, then Sunday, in that order of preference.",
+    "weekend_planning": {
+      "open_ratio": 0.5,
+      "notes": "Aim for roughly HALF of each weekend day left completely open/unscheduled for friends, parties, and downtime. The other half can hold study, errands, or a gym makeup session."
+    },
+    "weekday_block_style": {
+      "fully_blocked": true,
+      "category_labels": ["Golden Hour", "Movement", "Study", "Self Care", "Break", "Gym", "Wind Down"],
+      "notes": "On school days (not weekends, not holidays), fill essentially the ENTIRE day from wake_time to the bedtime target with labeled blocks -- no unlabeled gaps except real transitions (commute, meals already covered by lunch_at_school logic). Every new block's title should start with one of category_labels so the day reads like a fully structured routine, not scattered free time. This does NOT apply on weekends/holidays -- those stay governed by weekend_open_ratio instead."
+    },
+    "counselor_meetings": {
+      "notes": "Usually once a week, normally Sunday (sometimes Saturday). These show up as real invites already on Gmail/Calendar -- treat any existing counselor event as immovable like any other calendar event. Don't fill that day's likely counselor slot with something else if no invite exists yet."
+    },
+    "sleep_rules": {
+      "_comment": "Target is AT LEAST 7 hours before the FOLLOWING day's wake_time. Give a 30-min cushion before that target and 30-min after (for extra work), i.e. an acceptable bedtime window of roughly (wake_time - 7h30m) to (wake_time - 6h30m). On days with an earlier next-day wake time (gym mornings), push bedtime earlier accordingly -- don't schedule heavy activity too close to that window.",
+      "minimum_hours": 7,
+      "cushion_before_minutes": 30,
+      "cushion_after_minutes": 30
+    },
     "immediate_due_date_threshold_days": 2,
     "priority_order": ["rest", "immediate_due_dates", "social", "study", "exercise", "other_movable"],
     "friday_is_work_day": true,

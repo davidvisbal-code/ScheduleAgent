@@ -109,13 +109,19 @@ def fetch_holidays(rules, start, end):
 
 
 def fetch_existing_events(start, end):
+    # Look back to the most recent Monday too, not just forward -- otherwise
+    # by Wednesday the planner can't see whether Monday's gym actually
+    # happened, and "readjust if missed" has nothing to check against.
+    days_since_monday = start.weekday()  # Monday=0
+    lookback_start = start - datetime.timedelta(days=days_since_monday)
+
     events = []
     for key in ("calendar_school", "calendar_personal"):
         data = run_tool(
             "GOOGLECALENDAR_EVENTS_LIST",
             {
                 "calendarId": "primary",
-                "timeMin": f"{start.isoformat()}T00:00:00Z",
+                "timeMin": f"{lookback_start.isoformat()}T00:00:00Z",
                 "timeMax": f"{end.isoformat()}T23:59:59Z",
                 "singleEvents": True,
                 "orderBy": "startTime",
@@ -187,6 +193,21 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
     is_weekend = day.weekday() >= 5  # Sat=5, Sun=6
     is_friday = day.weekday() == 4
 
+    # Count gym sessions already on the calendar THIS WEEK (Mon through
+    # today), so Claude can tell if a makeup session is actually needed --
+    # this only works now that fetch_existing_events looks back to Monday.
+    week_start = day - datetime.timedelta(days=day.weekday())
+    gym_this_week = sum(
+        1 for e in existing_events
+        if "gym" in e.get("summary", "").lower()
+        and week_start.isoformat() <= e.get("start", {}).get("dateTime", e.get("start", {}).get("date", "")) <= day.isoformat()
+    )
+    gym_done_today = any(
+        "gym" in e.get("summary", "").lower()
+        and e.get("start", {}).get("dateTime", e.get("start", {}).get("date", "")).startswith(day.isoformat())
+        for e in existing_events
+    )
+
     day_events = [
         e for e in existing_events
         if e.get("start", {}).get("dateTime", e.get("start", {}).get("date", "")).startswith(day.isoformat())
@@ -194,12 +215,52 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
     day_due = [d for d in due_items if d["due_date"] == day]
     days_until = {d["title"]: (d["due_date"] - datetime.date.today()).days for d in due_items}
 
+    weekday_name = day.strftime("%A")
+    tomorrow_name = (day + datetime.timedelta(days=1)).strftime("%A")
+    schedule = rules["weekly_planner"]["daily_schedule"]
+    today_facts = schedule.get(weekday_name, {})
+    tomorrow_facts = schedule.get(tomorrow_name, {})
+    sleep_rules = rules["weekly_planner"]["sleep_rules"]
+
+    # Tonight's bedtime target depends on TOMORROW's wake time, not today's.
+    bedtime_target = None
+    if tomorrow_facts.get("wake_time"):
+        wake_dt = datetime.datetime.strptime(tomorrow_facts["wake_time"], "%H:%M")
+        min_before_sleep = datetime.timedelta(
+            hours=sleep_rules["minimum_hours"],
+            minutes=sleep_rules["cushion_before_minutes"],
+        )
+        max_before_sleep = datetime.timedelta(
+            hours=sleep_rules["minimum_hours"],
+            minutes=-sleep_rules["cushion_after_minutes"],
+        )
+        earliest = (wake_dt - min_before_sleep).strftime("%H:%M")
+        latest = (wake_dt - max_before_sleep).strftime("%H:%M")
+        bedtime_target = f"between {earliest} and {latest}"
+
     context = {
         "date": day.isoformat(),
-        "weekday": day.strftime("%A"),
+        "weekday": weekday_name,
         "is_colombian_holiday": is_holiday,
         "is_weekend": is_weekend,
         "is_friday_work_day": is_friday and rules["weekly_planner"]["friday_is_work_day"],
+        "wake_time_today": today_facts.get("wake_time"),
+        "gym_before_school_today": today_facts.get("gym_before_school", False),
+        "school_end_time_today": today_facts.get("school_end_time"),
+        "extracurricular_today": today_facts.get("extracurricular"),
+        "lunch_at_school_today": today_facts.get("lunch_at_school", False),
+        "day_notes": today_facts.get("notes"),
+        "commute_minutes": rules["weekly_planner"]["commute_minutes"],
+        "gym_target_sessions_per_week": rules["weekly_planner"]["gym_target_sessions_per_week"],
+        "gym_sessions_already_this_week": gym_this_week,
+        "gym_done_today_already": gym_done_today,
+        "gym_makeup_priority": rules["weekly_planner"]["gym_makeup_priority"],
+        "weekend_open_ratio": rules["weekly_planner"]["weekend_planning"]["open_ratio"] if is_weekend else None,
+        "counselor_meeting_notes": rules["weekly_planner"]["counselor_meetings"]["notes"] if day.weekday() >= 5 else None,
+        "weekday_block_style": rules["weekly_planner"]["weekday_block_style"] if not is_weekend and not is_holiday else None,
+        "tonight_bedtime_target": bedtime_target,
+        "tomorrow_weekday": tomorrow_name,
+        "tomorrow_wake_time": tomorrow_facts.get("wake_time"),
         "already_on_calendar": [
             {"title": e.get("summary"), "start": e.get("start"), "end": e.get("end")}
             for e in day_events
@@ -211,37 +272,71 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
         "friday_work_emails": friday_tasks if is_friday else [],
         "priority_order": rules["weekly_planner"]["priority_order"],
         "immediate_due_date_threshold_days": rules["weekly_planner"]["immediate_due_date_threshold_days"],
-        "school_end_time": rules["weekly_planner"]["school_end_time"],
-        "post_school_rest_buffer_minutes": rules["weekly_planner"]["post_school_rest_buffer_minutes"],
-        "bedtime": rules["weekly_planner"]["bedtime"],
-        "wake_time": rules["weekly_planner"]["wake_time"],
     }
 
-    prompt = f"""You're planning ONE day of David's schedule. Here's everything
-fixed and relevant for this day:
-
-{json.dumps(context, indent=2)}
+    static_instructions = f"""You're planning ONE day of David's schedule at a time.
 
 Rules:
 - Never touch or move anything already on the calendar (immovable classes,
   accepted meetings). Only propose NEW blocks for open time.
 - Rest and downtime come first in priority. Only bump rest for a due date
-  that's within {context['immediate_due_date_threshold_days']} days.
+  that's within {rules['weekly_planner']['immediate_due_date_threshold_days']} days.
 - Leave real room for social interaction -- don't schedule every open minute.
 - If it's a Colombian holiday or weekend, keep it light: at most 1-2 optional
   blocks (e.g. a study block only if something is due Monday), otherwise
-  leave the day open.
+  leave the day open. Saturday is also a backup gym day if the week's
+  Mon/Wed sessions didn't happen -- check already_on_calendar for gym this
+  week before deciding whether to add one.
 - If it's Friday and a work day, shape the evening/day around the work email
   subjects listed, not around school routine.
-- Respect the wake/bedtime window -- nothing before wake_time or after bedtime.
+- gym_before_school_today means an early gym+sauna session already happened
+  before wake_time_today's normal hour -- don't schedule anything else that
+  early, and note the person is already up.
+- School gets out at school_end_time_today, but free time doesn't start
+  then -- add commute_minutes before the person is actually home. If
+  extracurricular_today is set, use ITS end_time instead, plus commute.
+- lunch_at_school_today means no need to schedule a lunch/cooking block at
+  home; otherwise assume lunch happens shortly after arriving home.
+- Track toward gym_target_sessions_per_week (3) across the week using
+  gym_sessions_already_this_week. If today is Monday or Wednesday and
+  gym_before_school_today is true but gym_done_today_already is false,
+  that morning session was skipped -- follow gym_makeup_priority exactly
+  (same-day afternoon first, then Fri/Sat/Sun, lighter session on the
+  weekend days).
+- On weekends, respect weekend_open_ratio -- leave roughly that fraction of
+  the day completely open for friends/parties/downtime. Don't over-fill it.
+- If weekday_block_style is present (a school day, not weekend/holiday),
+  this day should be FULLY blocked -- fill essentially every hour from
+  wake_time to tonight_bedtime_target with labeled blocks, no meaningful
+  gaps besides real transitions already accounted for. Prefix every new
+  block's title with one of weekday_block_style's category_labels (e.g.
+  "Golden Hour: ...", "Movement: ...", "Study: ..."). This is the opposite
+  of the weekend approach -- don't leave open time on school days.
+- If counselor_meeting_notes is present (today is Sat/Sun), don't schedule
+  something else into the likely counselor slot unless one is already on
+  the calendar (check already_on_calendar first).
+- Respect tonight_bedtime_target for when this day's schedule should wind
+  down -- nothing pushed past that window. It already accounts for
+  tomorrow's wake time, which may be earlier (gym day) than usual.
 
 Respond ONLY with a JSON array (no other text) of proposed blocks, each:
 {{"title": str, "start_time": "HH:MM", "end_time": "HH:MM", "reason": str}}
 An empty array is a valid answer if nothing needs to be added today."""
 
+    prompt = f"""Here's everything fixed and relevant for this specific day:
+
+{json.dumps(context, indent=2)}"""
+
     response = claude.messages.create(
-        model="claude-sonnet-4-6",
+        model="claude-sonnet-5",
         max_tokens=800,
+        system=[
+            {
+                "type": "text",
+                "text": static_instructions,
+                "cache_control": {"type": "ephemeral"},
+            }
+        ],
         messages=[{"role": "user", "content": prompt}],
     )
     raw = response.content[0].text.strip()

@@ -94,9 +94,15 @@ def ask_claude(user_message, history):
             "content-type": "application/json",
         },
         json={
-            "model": "claude-sonnet-4-6",
+            "model": "claude-sonnet-5",
             "max_tokens": 1500,
-            "system": build_system_prompt(),
+            "system": [
+                {
+                    "type": "text",
+                    "text": build_system_prompt(),
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
             "messages": messages,
             "mcp_servers": [
                 {
