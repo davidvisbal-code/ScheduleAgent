@@ -329,7 +329,7 @@ An empty array is a valid answer if nothing needs to be added today."""
 
     response = claude.messages.create(
         model="claude-sonnet-5",
-        max_tokens=800,
+        max_tokens=4000,
         system=[
             {
                 "type": "text",
