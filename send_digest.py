@@ -20,8 +20,8 @@ WHATSAPP_ACCESS_TOKEN = os.environ["WHATSAPP_ACCESS_TOKEN"].strip()  # System Us
 
 # Must match EXACTLY what you named/approved in WhatsApp Manager -> Message
 # Templates. Check there if this ever fails with a "template not found" error.
-TEMPLATE_NAME = os.environ.get("WHATSAPP_TEMPLATE_NAME", "daily_digest").strip()
-TEMPLATE_LANGUAGE = os.environ.get("WHATSAPP_TEMPLATE_LANGUAGE", "en_US").strip()
+TEMPLATE_NAME = os.environ.get("WHATSAPP_TEMPLATE_NAME", "").strip() or "daily_digest"
+TEMPLATE_LANGUAGE = os.environ.get("WHATSAPP_TEMPLATE_LANGUAGE", "").strip() or "en_US"
 
 BASE_DIR = Path(__file__).parent
 DIGEST_QUEUE_FILE = BASE_DIR / "digest_queue.json"
