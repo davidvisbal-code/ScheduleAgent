@@ -1,10 +1,5 @@
 {
   "calendar_ids": [
-    "b7t1pqbefs46531ot9u5kuosbc",
-    "0qfqem9jp1sce1cmruf5q8tgj4",
-    "khtq07plls4m0g6iggqil95p3s",
-    "fe7hf33jft1krieutttnbtfpo8",
-    "td8fnaom4getv3aqld4vvh8ukc",
     "aqtagirvt5ldcucaq5d19iohm0",
     "0pi92a4l2shiubd6daua7t0qvg",
     "b996felor0lqor9r144a9mn6qg",
@@ -151,6 +146,8 @@
     "703624262166"
   ],
   "email_ids": [
+    "1a021b5b527a3402",
+    "1a021a65d4c18d81",
     "1a020f48570a8742",
     "1a0206c8cb8692f6",
     "1a02042cfd40f6eb",
@@ -164,8 +161,7 @@
     "1a01f0b7a0b6c253",
     "1a01f0b7a0b6c253",
     "1a01ba8af47a3be0",
-    "1a01b6878b5194f4",
-    "1a01afdef660de1e",
+    "1a021bfd0f27007f",
     "1a01feb82275d63f",
     "1a01fa06c2e38510",
     "1a01f63547b196d8",
@@ -179,7 +175,6 @@
     "1a01c997530707ff",
     "1a01c211d8df4e8c",
     "1a01bd35c7d261fb",
-    "1a0150bf37f33c9f",
-    "1a01b3ded625e918"
+    "1a0150bf37f33c9f"
   ]
 }
