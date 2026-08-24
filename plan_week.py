@@ -570,10 +570,14 @@ def main():
     # Ask about progress on anything due soon -- this SURFACES the question;
     # actually adjusting the plan based on your reply needs inbound WhatsApp
     # handling, which isn't built yet (see README "Not built yet" section).
-    soon_due = [d for d in due_items if (d["due_date"] - datetime.date.today()).days <= 2]
+    soon_due = [d for d in due_items if d["due_date"] and (d["due_date"] - datetime.date.today()).days <= 2]
+    uncertain_due = [d for d in due_items if d["due_date"] is None]
     if soon_due:
         titles = ", ".join(d["title"] for d in soon_due)
         summary_lines.append(f"\nHow's progress on: {titles}? Reply and I'll factor it into next week.")
+    if uncertain_due:
+        titles = ", ".join(f"{d['course']}: {d['title']}" for d in uncertain_due)
+        summary_lines.append(f"\n⚠️ No confirmed due date found for: {titles} -- couldn't locate the real date in Classroom, materials, Drive, or email. Worth double-checking with the teacher directly.")
 
     queue_digest("\n".join(summary_lines))
     print("[done] Weekly plan created and queued for next digest.")
