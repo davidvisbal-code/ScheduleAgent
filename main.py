@@ -228,11 +228,14 @@ def main():
 
     new_calendar_ids = []
     new_events = []
+    auto_prefix = rules["weekly_planner"]["auto_planned_event_prefix"]
     for ev in all_events:
         eid = ev.get("id")
         if not eid:
             continue
         new_calendar_ids.append(eid)
+        if ev.get("summary", "").startswith(auto_prefix):
+            continue  # this is plan_week.py's own auto-created event, not an external change worth flagging
         if eid not in state["calendar_ids"]:
             new_events.append(ev)
 
