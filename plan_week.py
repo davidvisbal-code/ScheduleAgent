@@ -16,12 +16,14 @@ see build_day_plan() below.
 import os
 import json
 import datetime
+import requests
 from pathlib import Path
 
 from composio import Composio
 import anthropic
 
 COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"].strip()  # same combined MCP URL used elsewhere
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
 
 ACCOUNTS = {
@@ -334,24 +336,59 @@ Respond ONLY with a JSON array (no other text) of proposed blocks, each:
 {{"title": str, "start_time": "HH:MM", "end_time": "HH:MM", "reason": str}}
 An empty array is a valid answer if nothing needs to be added today."""
 
+    static_instructions += """
+If there are items in due_today_or_soon, you have live access to Gmail,
+Calendar, Classroom, and Drive -- use them. Several teachers (especially
+Math) keep real quiz/workshop/activity dates inside a Google Sheet linked
+from Classroom, not in the coursework title. If a due item's real details
+aren't clear from the title alone, look up the coursework and check any
+linked Sheet/Doc before deciding how much time to block for it."""
+
     prompt = f"""Here's everything fixed and relevant for this specific day:
 
 {json.dumps(context, indent=2)}"""
 
-    response = claude.messages.create(
-        model="claude-sonnet-5",
-        max_tokens=1500,  # lowered back down now that thinking is off -- this was only raised to compensate for thinking eating the budget
-        thinking={"type": "disabled"},
-        system=[
-            {
-                "type": "text",
-                "text": static_instructions,
-                "cache_control": {"type": "ephemeral"},
-            }
-        ],
-        messages=[{"role": "user", "content": prompt}],
-    )
-    text_blocks = [block.text for block in response.content if getattr(block, "type", None) == "text"]
+    # Only attach live tools (and their extra cost) on days that actually
+    # have something due soon -- most days don't need this, keeps the
+    # other 6 calls in the week cheap and simple.
+    has_due_items = bool(context.get("due_today_or_soon"))
+    body = {
+        "model": "claude-sonnet-5",
+        "max_tokens": 1500,
+        "thinking": {"type": "disabled"},
+        "system": [{"type": "text", "text": static_instructions, "cache_control": {"type": "ephemeral"}}],
+        "messages": [{"role": "user", "content": prompt}],
+    }
+    headers = {
+        "x-api-key": ANTHROPIC_API_KEY,
+        "anthropic-version": "2023-06-01",
+        "content-type": "application/json",
+    }
+    if has_due_items:
+        body["mcp_servers"] = [{
+            "type": "url",
+            "url": COMPOSIO_MCP_URL,
+            "name": "composio-school-tools",
+            "authorization_token": COMPOSIO_API_KEY,
+        }]
+        headers["anthropic-beta"] = "mcp-client-2025-04-04"
+
+    try:
+        api_response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers=headers, json=body,
+            timeout=170 if has_due_items else 60,
+        )
+        data = api_response.json()
+    except requests.exceptions.RequestException as e:
+        print(f"[warn] Claude call failed for {day}: {e}")
+        return []
+
+    if "content" not in data:
+        print(f"[warn] Claude call failed for {day} ({api_response.status_code}): {data}")
+        return []
+
+    text_blocks = [b["text"] for b in data["content"] if b.get("type") == "text"]
     raw = "".join(text_blocks).strip()
     # Be tolerant of any stray text around the actual JSON array, instead of
     # requiring the whole response to be pure JSON (which kept failing).

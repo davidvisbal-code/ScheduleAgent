@@ -13,6 +13,7 @@ of. Templates are exempt from that restriction once approved by Meta.
 
 import os
 import json
+import datetime
 import requests
 from pathlib import Path
 
@@ -75,6 +76,16 @@ Write David a short morning debrief covering all of this. Rules:
   subject line.
 - If a Classroom post or email links to a Doc/Slide/Sheet with real
   instructions or content, open it and pull out what's actually relevant.
+- IMPORTANT: several of David's teachers (especially Math) keep the real
+  schedule of quizzes, workshops, and activity due dates inside a Google
+  Sheet linked from Classroom, not in the coursework title itself. If a
+  Classroom item references or links to a spreadsheet, open it and check
+  for upcoming dated items -- don't rely on the coursework title alone.
+- For anything due soon that David hasn't indicated he's finished, phrase
+  it as a direct question inviting a reply, not a passive FYI -- e.g.
+  "Have you started the Physics problem set due Friday? Tell me and I can
+  block time for it" instead of just "Physics: problem set due Friday."
+  This matters -- a reminder he can't act on isn't useful to him.
 - Keep it conversational and brief, like a text from a friend catching you
   up, not a bulleted report.
 - CRITICAL: your entire response must be ONE continuous block with NO line
@@ -83,33 +94,38 @@ Write David a short morning debrief covering all of this. Rules:
 - If, after filtering, nothing is actually worth mentioning, just say so in
   one short sentence."""
 
-    response = requests.post(
-        "https://api.anthropic.com/v1/messages",
-        headers={
-            "x-api-key": ANTHROPIC_API_KEY,
-            "anthropic-version": "2023-06-01",
-            "anthropic-beta": "mcp-client-2025-04-04",  # MCP connector is a beta feature
-            "content-type": "application/json",
-        },
-        json={
-            "model": "claude-sonnet-5",
-            "max_tokens": 1500,
-            "thinking": {"type": "disabled"},
-            "messages": [{"role": "user", "content": prompt}],
-            "mcp_servers": [
-                {
-                    "type": "url",
-                    "url": COMPOSIO_MCP_URL,
-                    "name": "composio-school-tools",
-                    "authorization_token": COMPOSIO_API_KEY,
-                }
-            ],
-        },
-        timeout=120,  # tool calls take longer than a plain text response
-    )
+    try:
+        response = requests.post(
+            "https://api.anthropic.com/v1/messages",
+            headers={
+                "x-api-key": ANTHROPIC_API_KEY,
+                "anthropic-version": "2023-06-01",
+                "anthropic-beta": "mcp-client-2025-04-04",  # MCP connector is a beta feature
+                "content-type": "application/json",
+            },
+            json={
+                "model": "claude-sonnet-5",
+                "max_tokens": 1500,
+                "thinking": {"type": "disabled"},
+                "messages": [{"role": "user", "content": prompt}],
+                "mcp_servers": [
+                    {
+                        "type": "url",
+                        "url": COMPOSIO_MCP_URL,
+                        "name": "composio-school-tools",
+                        "authorization_token": COMPOSIO_API_KEY,
+                    }
+                ],
+            },
+            timeout=170,  # tool calls take longer than a plain text response
+        )
+    except requests.exceptions.RequestException as e:
+        print(f"[digest] Claude organize call raised an exception, falling back to raw list: {e}")
+        return sanitize_for_template(" • ".join(raw_items))
+
     data = response.json()
     if "content" not in data:
-        print(f"[digest] Claude organize call failed, falling back to raw list: {data}")
+        print(f"[digest] Claude organize call failed ({response.status_code}), falling back to raw list: {data}")
         return sanitize_for_template(" • ".join(raw_items))
 
     text_parts = [block["text"] for block in data["content"] if block.get("type") == "text"]
@@ -124,9 +140,24 @@ def build_digest_text():
         queue = json.loads(DIGEST_QUEUE_FILE.read_text())
 
     if not queue:
-        return queue, "Nothing new overnight -- your schedule's unchanged."
+        return queue, "Nothing new overnight -- your schedule's unchanged"
 
-    raw_items = [item["text"] for item in queue]
+    # Drop anything older than 48h (stale leftovers from a past failed
+    # send that never cleared the queue) and remove exact duplicates,
+    # which is what caused the same summary repeating 3x in one message.
+    cutoff = (datetime.datetime.utcnow() - datetime.timedelta(hours=48)).isoformat()
+    fresh = [item for item in queue if item.get("added", "") >= cutoff]
+    seen = set()
+    deduped = []
+    for item in fresh:
+        if item["text"] not in seen:
+            seen.add(item["text"])
+            deduped.append(item)
+
+    if not deduped:
+        return queue, "Nothing new overnight -- your schedule's unchanged"
+
+    raw_items = [item["text"] for item in deduped]
     return queue, organize_with_claude(raw_items)
 
 
