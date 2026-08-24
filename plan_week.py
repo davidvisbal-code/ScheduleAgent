@@ -147,6 +147,9 @@ def fetch_due_dates(start, end):
     due_items = []
     if not courses_data:
         return due_items
+
+    recent_cutoff = (datetime.datetime.utcnow() - datetime.timedelta(days=21)).isoformat()
+
     for course in courses_data.get("courses", []):
         work_data = run_tool(
             "GOOGLE_CLASSROOM_COURSE_WORK_LIST",
@@ -157,15 +160,38 @@ def fetch_due_dates(start, end):
             continue
         for item in work_data.get("courseWork", []):
             due = item.get("dueDate")
-            if not due:
+            due_date = None
+            if due:
+                due_date = datetime.date(due["year"], due["month"], due["day"])
+
+            # DON'T silently drop items with no structured due date -- many
+            # teachers put the real date in a linked Sheet/Doc instead of
+            # using Classroom's due-date field. Only filter by recency, so
+            # anything posted/updated in the last 3 weeks gets surfaced for
+            # Claude to actually check (title, description, and any linked
+            # materials), rather than being invisible just because the API
+            # field was left empty or points to the wrong date.
+            update_time = item.get("updateTime", "")
+            if due_date is None and update_time < recent_cutoff:
                 continue
-            due_date = datetime.date(due["year"], due["month"], due["day"])
-            if start <= due_date <= end:
-                due_items.append({
-                    "course": course.get("name", ""),
-                    "title": item.get("title", ""),
-                    "due_date": due_date,
-                })
+            if due_date is not None and not (start <= due_date <= end) and update_time < recent_cutoff:
+                continue
+
+            materials = item.get("materials", [])
+            material_links = []
+            for m in materials:
+                if "driveFile" in m:
+                    material_links.append(m["driveFile"].get("driveFile", {}).get("title", "linked Drive file"))
+                elif "link" in m:
+                    material_links.append(m["link"].get("url", "linked URL"))
+
+            due_items.append({
+                "course": course.get("name", ""),
+                "title": item.get("title", ""),
+                "description": item.get("description", "")[:300],
+                "due_date": due_date,  # may be None -- Claude should check materials/description for the real date
+                "materials": material_links,
+            })
     return due_items
 
 
@@ -219,10 +245,17 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
     # old version always used real today, so something due tomorrow looked
     # "due today" on every single day of the week, forever, even after it
     # actually passed. That's the MaryMUN bug.
-    days_until = {d["title"]: (d["due_date"] - day).days for d in due_items}
+    days_until = {
+        d["title"]: (d["due_date"] - day).days if d["due_date"] else None
+        for d in due_items
+    }
     # Anything already past due (relative to this day) shouldn't get study
-    # time scheduled for it at all -- there's nothing left to do.
-    still_relevant_due_items = [d for d in due_items if (d["due_date"] - day).days >= 0]
+    # time scheduled for it -- but keep items with NO known due date (they
+    # need investigating, not filtering out) and anything not yet due.
+    still_relevant_due_items = [
+        d for d in due_items
+        if d["due_date"] is None or (d["due_date"] - day).days >= 0
+    ]
 
     weekday_name = day.strftime("%A")
     tomorrow_name = (day + datetime.timedelta(days=1)).strftime("%A")
@@ -275,7 +308,14 @@ def build_day_plan(day, rules, holidays, existing_events, due_items, friday_task
             for e in day_events
         ],
         "due_today_or_soon": [
-            {"title": d["title"], "course": d["course"], "days_until_due": days_until.get(d["title"], None)}
+            {
+                "title": d["title"],
+                "course": d["course"],
+                "days_until_due": days_until.get(d["title"], None),
+                "due_date_is_uncertain": d["due_date"] is None,
+                "description": d.get("description", ""),
+                "materials": d.get("materials", []),
+            }
             for d in still_relevant_due_items
         ],
         "friday_work_emails": friday_tasks if is_friday else [],
@@ -337,21 +377,38 @@ Respond ONLY with a JSON array (no other text) of proposed blocks, each:
 An empty array is a valid answer if nothing needs to be added today."""
 
     static_instructions += """
-If there are items in due_today_or_soon, you have live access to Gmail,
-Calendar, Classroom, and Drive -- use them. Several teachers (especially
-Math) keep real quiz/workshop/activity dates inside a Google Sheet linked
-from Classroom, not in the coursework title. If a due item's real details
-aren't clear from the title alone, look up the coursework and check any
-linked Sheet/Doc before deciding how much time to block for it."""
+You have live access to Gmail, Calendar, Classroom, and Drive -- use them
+ACTIVELY, every single day, not just when something is already flagged in
+due_today_or_soon and not just when a link happens to appear on a
+coursework item. Several teachers (especially Math and English) keep the
+real schedule of quizzes/workshops/due dates in a Google Sheet or Doc that
+may not be directly attached to any specific Classroom post, or mentioned
+only in an email thread with that teacher.
+For any item with due_date_is_uncertain=true, and proactively for active
+courses in general:
+1. Check its description and materials first (listed per item).
+2. SEARCH Drive for a spreadsheet/doc whose name relates to the course
+   (e.g. the course name, "schedule", "due dates") even without an
+   explicit link pointing to it.
+3. SEARCH Gmail for recent messages from/about that teacher or course --
+   the real date may only exist in an ongoing email conversation, not in
+   Classroom at all.
+Do this before concluding you don't know the date, and do it even on days
+with no flagged due items -- silence from Classroom doesn't mean nothing's
+due. Missing a real quiz or assignment date because you only checked the
+obvious place is exactly the failure this planner exists to prevent."""
 
     prompt = f"""Here's everything fixed and relevant for this specific day:
 
 {json.dumps(context, indent=2)}"""
 
-    # Only attach live tools (and their extra cost) on days that actually
-    # have something due soon -- most days don't need this, keeps the
-    # other 6 calls in the week cheap and simple.
-    has_due_items = bool(context.get("due_today_or_soon"))
+    # Live tools are now ALWAYS on for every day, not just when something
+    # already got flagged as due -- the whole point is catching things
+    # BEFORE they're already known about (a Sheet a teacher shared, a date
+    # mentioned in an email thread). Gating this on due_today_or_soon meant
+    # we'd only look where we already knew to look, which is exactly how a
+    # quiz can get missed. This costs more per day -- see README note.
+    has_due_items = True
     body = {
         "model": "claude-sonnet-5",
         "max_tokens": 1500,
@@ -481,6 +538,17 @@ def main():
     existing_events = fetch_existing_events(start, end)
     due_items = fetch_due_dates(start, end)
     friday_tasks = fetch_friday_work_tasks(rules)
+
+    # If there's a fresh 📧 email or 📚 coursework signal already queued
+    # (from main.py's change detection), grant today's planning call live
+    # tool access too, even if fetch_due_dates found nothing formal -- this
+    # is how a teacher email with no matching Classroom post still gets
+    # investigated instead of silently skipped.
+    queued_today = load_json(DIGEST_QUEUE_FILE, [])
+    has_fresh_signal_today = any(
+        item["text"].startswith("📧") or item["text"].startswith("📚")
+        for item in queued_today
+    )
 
     summary_lines = [f"📆 7-day plan refreshed: {start.strftime('%a %b %d')} → {end.strftime('%a %b %d')}"]
 

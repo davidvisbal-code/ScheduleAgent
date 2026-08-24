@@ -65,22 +65,37 @@ look it up and read it before writing the summary. Don't just repeat the
 raw title back to him -- tell him what it actually says.
 
 Write David a short morning debrief covering all of this. Rules:
-- Group by category, most important first: conflicts, then classroom
-  assignments/due dates (with real content, e.g. "Physics: problem set on
-  momentum, due Friday" not just "New coursework: Assignment 3"), then
-  calendar changes, then emails.
+- Group into EXPLICIT LABELED SECTIONS in this order, and skip any section
+  that has nothing in it (don't write "None" for empty ones, just omit
+  them): "⚠️ CONFLICTS:", "📚 DUE SOON:", "📅 CALENDAR:", "📧 EMAILS:".
+  Start each section with its bold-style label, then the items for that
+  section, then move to the next label. This must read as clearly separated
+  blocks, not one flowing paragraph -- that's the #1 complaint so far.
+- Within "📚 DUE SOON", be concrete and specific per item: course, what it
+  actually is, and the real due date/time if you found one -- e.g. "Math:
+  Quiz Tue 8/25 (found in linked Sheet, not Classroom's own due date)."
+  Missing or vague due-date info here is the single worst failure mode.
 - For emails, only mention ones that seem genuinely worth knowing about
   (school administrative notices, teacher messages, anything actionable) --
   skip marketing, generic notifications, anything unimportant. For the ones
   you do mention, summarize what the email actually says, not just the
   subject line.
+- CRITICAL: any email from a teacher or the school domain must be FULLY
+  read (open the actual message, not just the subject/snippet) -- teachers
+  regularly communicate real quiz/assignment dates directly in email
+  threads, not just through Classroom. A subject line alone is not enough
+  to judge whether an email matters.
 - If a Classroom post or email links to a Doc/Slide/Sheet with real
   instructions or content, open it and pull out what's actually relevant.
-- IMPORTANT: several of David's teachers (especially Math) keep the real
-  schedule of quizzes, workshops, and activity due dates inside a Google
-  Sheet linked from Classroom, not in the coursework title itself. If a
-  Classroom item references or links to a spreadsheet, open it and check
-  for upcoming dated items -- don't rely on the coursework title alone.
+- IMPORTANT: several of David's teachers (especially Math and English) keep
+  the real schedule of quizzes, workshops, and activity due dates inside a
+  Google Sheet or Doc, or only mention it in an email conversation with the
+  teacher -- NOT always attached directly to the Classroom post. Don't just
+  check what's linked on the coursework item itself: actively SEARCH Drive
+  for a spreadsheet/doc related to the course, and SEARCH Gmail for recent
+  messages from that teacher, before concluding there's no real date. This
+  matters more than anything else in this digest -- a missed quiz date is
+  the worst possible failure here.
 - For anything due soon that David hasn't indicated he's finished, phrase
   it as a direct question inviting a reply, not a passive FYI -- e.g.
   "Have you started the Physics problem set due Friday? Tell me and I can
