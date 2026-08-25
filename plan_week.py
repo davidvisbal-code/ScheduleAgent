@@ -462,9 +462,9 @@ obvious place is exactly the failure this planner exists to prevent."""
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
-        block_types = [getattr(b, "type", "?") for b in response.content]
+        block_types = [b.get("type", "?") for b in data.get("content", [])]
         print(f"[warn] Couldn't parse Claude's plan for {day}. "
-              f"stop_reason={getattr(response, 'stop_reason', '?')}, "
+              f"stop_reason={data.get('stop_reason', '?')}, "
               f"block_types={block_types}, raw_length={len(raw)}, "
               f"raw_preview={raw[:200]!r}")
         return []
