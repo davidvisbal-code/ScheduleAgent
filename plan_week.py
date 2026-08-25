@@ -24,6 +24,9 @@ import anthropic
 
 COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
 COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"].strip()  # same combined MCP URL used elsewhere
+# NOT the same key as COMPOSIO_API_KEY above -- MCP calls need the original
+# consumer-dashboard key, same value still correctly sitting in Render.
+COMPOSIO_MCP_AUTH_TOKEN = os.environ["COMPOSIO_MCP_AUTH_TOKEN"].strip()
 ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
 
 ACCOUNTS = {
@@ -388,8 +391,11 @@ For any item with due_date_is_uncertain=true, and proactively for active
 courses in general:
 1. Check its description and materials first (listed per item).
 2. SEARCH Drive for a spreadsheet/doc whose name relates to the course
-   (e.g. the course name, "schedule", "due dates") even without an
-   explicit link pointing to it.
+   (e.g. the course name, "schedule", "due dates"). Specifically look for
+   something like a "Trimester Plan" master sheet in Math folders -- some
+   teachers keep the ENTIRE trimester's quizzes/workshops/activities in one
+   master spreadsheet rather than per-assignment dates. Check for this by
+   name even if nothing links to it directly.
 3. SEARCH Gmail for recent messages from/about that teacher or course --
    the real date may only exist in an ongoing email conversation, not in
    Classroom at all.
@@ -426,7 +432,7 @@ obvious place is exactly the failure this planner exists to prevent."""
             "type": "url",
             "url": COMPOSIO_MCP_URL,
             "name": "composio-school-tools",
-            "authorization_token": COMPOSIO_API_KEY,
+            "authorization_token": COMPOSIO_MCP_AUTH_TOKEN,
         }]
         headers["anthropic-beta"] = "mcp-client-2025-04-04"
 
@@ -563,8 +569,8 @@ def main():
         if blocks:
             block_summary = ", ".join(f"{b['title']} ({b['start_time']}-{b['end_time']})" for b in blocks)
             summary_lines.append(f"{day.strftime('%a %m/%d')}: {block_summary}")
-        else:
-            summary_lines.append(f"{day.strftime('%a %m/%d')}: nothing added, day left as-is")
+        # Days with nothing added just don't get a line -- reporting 5-6
+        # "nothing added" days was pure noise cluttering every digest.
         day += datetime.timedelta(days=1)
 
     # Ask about progress on anything due soon -- this SURFACES the question;

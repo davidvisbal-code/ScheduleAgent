@@ -17,9 +17,13 @@ import datetime
 import requests
 from pathlib import Path
 
-ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
 COMPOSIO_API_KEY = os.environ["COMPOSIO_API_KEY"].strip()
+ANTHROPIC_API_KEY = os.environ["ANTHROPIC_API_KEY"].strip()
 COMPOSIO_MCP_URL = os.environ["COMPOSIO_MCP_URL"].strip()  # same combined MCP URL the chat bot uses
+# NOT the same key as COMPOSIO_API_KEY above -- that one is for the raw SDK
+# (composio.tools.execute), this one is the original key MCP calls need,
+# same value that's still sitting correctly in Render for the chat bot.
+COMPOSIO_MCP_AUTH_TOKEN = os.environ["COMPOSIO_MCP_AUTH_TOKEN"].strip()
 WHATSAPP_PHONE_NUMBER_ID = os.environ["WHATSAPP_PHONE_NUMBER_ID"].strip()
 WHATSAPP_TO_NUMBER = os.environ["WHATSAPP_TO_NUMBER"].strip()
 WHATSAPP_ACCESS_TOKEN = os.environ["WHATSAPP_ACCESS_TOKEN"].strip()  # System User permanent token
@@ -128,7 +132,7 @@ Write David a short morning debrief covering all of this. Rules:
                         "type": "url",
                         "url": COMPOSIO_MCP_URL,
                         "name": "composio-school-tools",
-                        "authorization_token": COMPOSIO_API_KEY,
+                        "authorization_token": COMPOSIO_MCP_AUTH_TOKEN,
                     }
                 ],
             },
