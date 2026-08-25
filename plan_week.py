@@ -218,6 +218,39 @@ def fetch_friday_work_tasks(rules):
     return tasks
 
 
+def extract_json_array(text):
+    """Find the first top-level JSON array in text and return exactly that
+    substring, correctly matching brackets (ignoring any inside quoted
+    strings) instead of naively grabbing the LAST "]" in the whole text --
+    which breaks the moment any trailing narration contains its own "]"."""
+    start = text.find("[")
+    if start == -1:
+        return text
+    depth = 0
+    in_string = False
+    escape_next = False
+    for i in range(start, len(text)):
+        ch = text[i]
+        if escape_next:
+            escape_next = False
+            continue
+        if ch == "\\":
+            escape_next = True
+            continue
+        if ch == '"':
+            in_string = not in_string
+            continue
+        if in_string:
+            continue
+        if ch == "[":
+            depth += 1
+        elif ch == "]":
+            depth -= 1
+            if depth == 0:
+                return text[start:i + 1]
+    return text[start:]  # never closed -- return what we have, will fail to parse and get logged
+
+
 def build_day_plan(day, rules, holidays, existing_events, due_items, friday_tasks):
     """Ask Claude to propose blocks for a single day, given everything fixed."""
     is_holiday = day in holidays
@@ -375,6 +408,12 @@ Rules:
   down -- nothing pushed past that window. It already accounts for
   tomorrow's wake time, which may be earlier (gym day) than usual.
 
+While searching/investigating due dates, don't narrate what you're doing
+("Let me check...", "I'll search Drive for...") -- every word of narration
+is token budget that isn't going toward the actual answer, and has caused
+real cutoff failures. Just use the tools silently and produce the final
+JSON once you're done investigating.
+
 Respond ONLY with a JSON array (no other text) of proposed blocks, each:
 {{"title": str, "start_time": "HH:MM", "end_time": "HH:MM", "reason": str}}
 An empty array is a valid answer if nothing needs to be added today."""
@@ -417,7 +456,7 @@ obvious place is exactly the failure this planner exists to prevent."""
     has_due_items = True
     body = {
         "model": "claude-sonnet-5",
-        "max_tokens": 1500,
+        "max_tokens": 6000,  # raised again -- live search across multiple tools + final JSON needs real room, 1500 kept truncating mid-answer
         "thinking": {"type": "disabled"},
         "system": [{"type": "text", "text": static_instructions, "cache_control": {"type": "ephemeral"}}],
         "messages": [{"role": "user", "content": prompt}],
@@ -453,12 +492,11 @@ obvious place is exactly the failure this planner exists to prevent."""
 
     text_blocks = [b["text"] for b in data["content"] if b.get("type") == "text"]
     raw = "".join(text_blocks).strip()
-    # Be tolerant of any stray text around the actual JSON array, instead of
-    # requiring the whole response to be pure JSON (which kept failing).
-    start_idx = raw.find("[")
-    end_idx = raw.rfind("]")
-    if start_idx != -1 and end_idx != -1 and end_idx > start_idx:
-        raw = raw[start_idx:end_idx + 1]
+    # Find the actual matching closing bracket by tracking nesting depth,
+    # rather than just grabbing the LAST "]" in the whole response -- that
+    # broke whenever trailing narration text happened to contain its own
+    # "]" character somewhere after the real JSON array had already ended.
+    raw = extract_json_array(raw)
     try:
         return json.loads(raw)
     except json.JSONDecodeError:
