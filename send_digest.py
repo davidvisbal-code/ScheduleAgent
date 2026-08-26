@@ -107,6 +107,10 @@ Write David a short morning debrief covering all of this. Rules:
   This matters -- a reminder he can't act on isn't useful to him.
 - Keep it conversational and brief, like a text from a friend catching you
   up, not a bulleted report.
+- CRITICAL: do NOT narrate your own investigation ("Let me search...",
+  "I'll dig into...", "Now let me check..."). Do all your searching/tool
+  use silently, then write ONLY the final debrief -- none of your process
+  should ever appear in the message David actually receives.
 - CRITICAL: your entire response must be ONE continuous block with NO line
   breaks of any kind (WhatsApp template limitation) -- use " • " between
   distinct points instead of new lines. Keep it under 900 characters total.
