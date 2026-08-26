@@ -441,7 +441,15 @@ courses in general:
 Do this before concluding you don't know the date, and do it even on days
 with no flagged due items -- silence from Classroom doesn't mean nothing's
 due. Missing a real quiz or assignment date because you only checked the
-obvious place is exactly the failure this planner exists to prevent."""
+obvious place is exactly the failure this planner exists to prevent.
+
+HARD LIMIT ON SEARCH EFFORT: try at most 2 search queries per source
+(Drive, Gmail) per course you're investigating. If a search comes back
+empty, do NOT keep retrying with reworded queries -- move on and report
+that item as still-uncertain instead. Endless retry loops on failed
+searches have repeatedly burned the entire response budget with nothing to
+show for it, which is worse than an honest "couldn't find it" -- report the
+uncertainty and finalize the day's plan rather than searching indefinitely."""
 
     prompt = f"""Here's everything fixed and relevant for this specific day:
 
