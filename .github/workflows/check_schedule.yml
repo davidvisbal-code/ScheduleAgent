@@ -9,10 +9,8 @@ concurrency:
 
 on:
   schedule:
-    # Change detection: every 15 minutes. GitHub does not guarantee exact
-    # timing -- under load this can lag 10-20 minutes. For true minute-level
-    # freshness, run main.py in a loop on a small VPS instead (see README.md).
-    - cron: "*/15 * * * *"
+    # Change detection: every 30 minutes.
+    - cron: "*/30 * * * *"
     # Morning digest: 7:00 AM Colombia time (UTC-5) = 12:00 UTC.
     - cron: "0 12 * * *"
     # Rolling planner: 6:00 AM Colombia time, EVERY DAY = 11:00 UTC.
