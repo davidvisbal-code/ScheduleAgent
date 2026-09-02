@@ -12,6 +12,7 @@ of. Templates are exempt from that restriction once approved by Meta.
 """
 
 import os
+import re
 import json
 import datetime
 import requests
@@ -40,7 +41,7 @@ DIGEST_QUEUE_FILE = BASE_DIR / "digest_queue.json"
 def sanitize_for_template(text):
     """WhatsApp template parameters can't contain newlines/tabs or 4+
     consecutive spaces (allowed in free-form text, not templates)."""
-    text = text.replace("\n\n", " • ").replace("\n", " • ").replace("\t", " ")
+    text = text.replace("\n\n", " \u2022 ").replace("\n", " \u2022 ").replace("\t", " ")
     while "    " in text:  # collapse any run of 4+ spaces
         text = text.replace("    ", " ")
     return text
@@ -61,12 +62,14 @@ coursework, 📧 = email):
 {json.dumps(raw_items, indent=2)}
 
 You have live access to David's Gmail, Google Calendar, Google Classroom,
-and Google Drive through the tools available to you. USE THEM: for any item
-above where the title/subject alone isn't enough to actually inform David
-(a classroom assignment whose real instructions matter, an email whose body
-has the actual details, a linked Doc/Slide/Sheet with content he needs),
-look it up and read it before writing the summary. Don't just repeat the
-raw title back to him -- tell him what it actually says.
+and Google Drive through the tools available to you. COST/SCOPE LIMIT --
+only use these tools for ⚠️ CONFLICTS and 📚 COURSEWORK items, where a
+missing or wrong due date is a real failure. For 📅 CALENDAR and 📧 EMAIL
+items, write the summary directly from the raw text already given below --
+do NOT open emails, search Drive, or search Gmail for those, even if more
+context is theoretically available. Don't just repeat a coursework item's
+raw title back to him when you did look it up, though -- tell him what it
+actually says.
 
 Write David a short morning debrief covering all of this. Rules:
 - Group into EXPLICIT LABELED SECTIONS in this order, and skip any section
@@ -84,13 +87,13 @@ Write David a short morning debrief covering all of this. Rules:
   skip marketing, generic notifications, anything unimportant. For the ones
   you do mention, summarize what the email actually says, not just the
   subject line.
-- CRITICAL: any email from a teacher or the school domain must be FULLY
+- CRITICAL (still scoped to 📚 DUE SOON only): when checking a coursework
+  item's real due date, any relevant email from that teacher must be FULLY
   read (open the actual message, not just the subject/snippet) -- teachers
   regularly communicate real quiz/assignment dates directly in email
-  threads, not just through Classroom. A subject line alone is not enough
-  to judge whether an email matters.
-- If a Classroom post or email links to a Doc/Slide/Sheet with real
-  instructions or content, open it and pull out what's actually relevant.
+  threads, not just through Classroom.
+- If a Classroom post linked to a coursework item has a Doc/Slide/Sheet
+  with real instructions or content, open it and pull out what's relevant.
 - IMPORTANT: several of David's teachers (especially Math and English) keep
   the real schedule of quizzes, workshops, and activity due dates inside a
   Google Sheet or Doc, or only mention it in an email conversation with the
@@ -111,6 +114,12 @@ Write David a short morning debrief covering all of this. Rules:
   "I'll dig into...", "Now let me check..."). Do all your searching/tool
   use silently, then write ONLY the final debrief -- none of your process
   should ever appear in the message David actually receives.
+- CRITICAL SAFETY NET: wrap your entire final debrief, and ONLY the final
+  debrief, in <digest> and </digest> tags -- e.g. <digest>...the message...
+  </digest>. Everything outside those tags is discarded automatically
+  before David ever sees it, so any notes, narration, or tool-use commentary
+  you produce must stay outside the tags, and the tags must contain nothing
+  but the message itself.
 - CRITICAL: your entire response must be ONE continuous block with NO line
   breaks of any kind (WhatsApp template limitation) -- use " • " between
   distinct points instead of new lines. Keep it under 900 characters total.
@@ -152,7 +161,22 @@ Write David a short morning debrief covering all of this. Rules:
         return sanitize_for_template(" • ".join(raw_items))
 
     text_parts = [block["text"] for block in data["content"] if block.get("type") == "text"]
-    text = "".join(text_parts).strip()
+    full_text = "".join(text_parts).strip()
+
+    # Structural safety net: only trust what's inside <digest> tags, no
+    # matter what narration Claude produced while using tools. This is what
+    # actually stops a repeat of the raw-investigation-text leak -- the
+    # prompt instruction above is a request, this is the guarantee. Falls
+    # back to the LAST text block (closest to a final answer) if the model
+    # forgot the tags, then to the raw list if that's empty too.
+    match = re.search(r"<digest>(.*?)</digest>", full_text, re.DOTALL)
+    if match:
+        text = match.group(1).strip()
+    elif text_parts:
+        text = text_parts[-1].strip()
+    else:
+        text = ""
+
     return sanitize_for_template(text) if text else sanitize_for_template(" • ".join(raw_items))
 
 
