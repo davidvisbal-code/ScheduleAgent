@@ -1,13 +1,13 @@
 {
   "calendar_ids": [
-    "vnhhbrfnuki2293foofsnv6oar_20260922T171500Z",
     "59u5roa474pnl2rg7ojnss37v0_20260924T152900Z",
     "ltrr9u0b45j4qvh6e4v7uei3fj_20260924T175300Z",
     "vnhhbrfnuki2293foofsnv6oar_20260929T171500Z",
     "3ncr1uuj5usl4kkqeql4n6m0pq",
     "2nghj6r3unpgsi7qqm8gvs8ker",
     "59u5roa474pnl2rg7ojnss37v0_20261001T152900Z",
-    "ltrr9u0b45j4qvh6e4v7uei3fj_20261001T175300Z"
+    "ltrr9u0b45j4qvh6e4v7uei3fj_20261001T175300Z",
+    "vnhhbrfnuki2293foofsnv6oar_20261006T171500Z"
   ],
   "coursework_ids": [
     "869748291624",
@@ -69,6 +69,9 @@
     "703624262166"
   ],
   "email_ids": [
+    "1a0ca66b3becbed5",
+    "1a0ca5be6acba395",
+    "1a0ca1e5faa5023d",
     "1a0ca0c748898279",
     "1a0c9d154c3b5820",
     "1a0c9bafc32af6fa",
@@ -81,9 +84,11 @@
     "1a0c5ff707318349",
     "1a0c5e5f7ac05095",
     "1a0c4e1a47ef80ca",
-    "1a0c4d56e2e0ab58",
-    "1a0c471a444293bd",
-    "1a0c45ac39645e3d",
+    "1a0cac29f597bbcd",
+    "1a0cab76c1630a55",
+    "1a0cab4dc7b75db3",
+    "1a0ca6d9916d78f5",
+    "1a0ca54c2e21bda9",
     "1a0ca121e2336118",
     "1a0c986f1b4a97d6",
     "1a0c972cc5486f0c",
@@ -93,11 +98,6 @@
     "1a0c91f4e6da9448",
     "1a0c690df507ecfa",
     "1a0c59071ea0f72b",
-    "1a0c574b99aee4d1",
-    "1a0c5600283fd2b1",
-    "1a0c5473b13c7142",
-    "1a0c46856f741107",
-    "1a0c42405b0a0370",
-    "1a0c3d9b483d621f"
+    "1a0c574b99aee4d1"
   ]
 }
